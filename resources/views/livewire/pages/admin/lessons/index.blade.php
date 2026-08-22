@@ -48,6 +48,7 @@ $resetForm = function () {
     ]);
     $this->type = Lesson::TYPE_TEXT;
     $this->order = 0;
+    $this->is_published = false;
     $this->exercise_language = 'html';
 };
 
@@ -291,6 +292,7 @@ $delete = function (Lesson $lesson) {
                     <input type="checkbox" wire:model="is_published" class="rounded-sm border-2 border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                     <span class="ms-2 text-sm text-ink-secondary">{{ __('Publikasikan') }}</span>
                 </label>
+                <x-input-error :messages="$errors->get('is_published')" class="mt-1" />
 
                 <div class="flex justify-end gap-3 pt-2 sticky bottom-0 bg-surface">
                     <x-secondary-button type="button" wire:click="$set('showModal', false)">{{ __('Batal') }}</x-secondary-button>

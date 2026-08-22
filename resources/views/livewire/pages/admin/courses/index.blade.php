@@ -36,6 +36,7 @@ with(fn () => [
 $resetForm = function () {
     $this->reset(['editingId', 'title', 'slug', 'description', 'order', 'is_published', 'lock_lessons_sequentially']);
     $this->order = 0;
+    $this->is_published = false;
     $this->lock_lessons_sequentially = true;
 };
 
@@ -188,6 +189,7 @@ $delete = function (Course $course) {
                         <input type="checkbox" wire:model="is_published" class="rounded-sm border-2 border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                         <span class="ms-2 text-sm text-ink-secondary">{{ __('Publikasikan') }}</span>
                     </label>
+                    <x-input-error :messages="$errors->get('is_published')" class="mt-1" />
 
                     <label class="flex items-center">
                         <input type="checkbox" wire:model="lock_lessons_sequentially" class="rounded-sm border-2 border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">

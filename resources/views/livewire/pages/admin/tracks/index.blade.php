@@ -25,6 +25,7 @@ with(fn () => [
 $resetForm = function () {
     $this->reset(['editingId', 'title', 'slug', 'description', 'order', 'is_published']);
     $this->order = 0;
+    $this->is_published = false;
 };
 
 $openCreate = function () {
@@ -167,6 +168,7 @@ $delete = function (Track $track) {
                             <input type="checkbox" wire:model="is_published" class="rounded-sm border-2 border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                             <span class="ms-2 text-sm text-ink-secondary">{{ __('Publikasikan') }}</span>
                         </label>
+                        <x-input-error :messages="$errors->get('is_published')" class="mt-2" />
                     </div>
                 </div>
 
