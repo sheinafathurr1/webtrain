@@ -16,6 +16,7 @@ state([
     'description' => '',
     'order' => 0,
     'is_published' => false,
+    'confirmingDeleteId' => null,
 ]);
 
 with(fn () => [
@@ -66,8 +67,12 @@ $save = function () {
     $this->resetForm();
 };
 
-$delete = function (Track $track) {
-    $track->delete();
+$delete = function () {
+    if ($this->confirmingDeleteId) {
+        Track::find($this->confirmingDeleteId)?->delete();
+    }
+
+    $this->confirmingDeleteId = null;
 };
 
 ?>
@@ -110,7 +115,7 @@ $delete = function (Track $track) {
                                     <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
                                         <a href="{{ route('admin.courses.index', $track) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Course') }}</a>
                                         <button wire:click="openEdit({{ $track->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
-                                        <button wire:click="delete({{ $track->id }})" wire:confirm="{{ __('Hapus track ini beserta seluruh course di dalamnya?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                        <button type="button" wire:click="confirmingDeleteId = {{ $track->id }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                     </td>
                                 </tr>
                             @empty
@@ -179,4 +184,9 @@ $delete = function (Track $track) {
             </form>
         </div>
     </div>
+
+    <x-confirm-delete-modal
+        :title="__('Hapus Track?')"
+        :message="__('Track ini beserta seluruh course di dalamnya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.')"
+    />
 </div>

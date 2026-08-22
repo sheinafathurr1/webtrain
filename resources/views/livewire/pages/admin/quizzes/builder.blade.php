@@ -23,6 +23,7 @@ state([
     'order' => 0,
     'options' => [],
     'correctOptionIndex' => null,
+    'confirmingDeleteId' => null,
 ]);
 
 mount(function (Lesson $lesson) {
@@ -155,8 +156,12 @@ $saveQuestion = function () {
     $this->resetQuestionForm();
 };
 
-$deleteQuestion = function (Question $question) {
-    $question->delete();
+$deleteQuestion = function () {
+    if ($this->confirmingDeleteId) {
+        Question::find($this->confirmingDeleteId)?->delete();
+    }
+
+    $this->confirmingDeleteId = null;
 };
 
 ?>
@@ -221,7 +226,7 @@ $deleteQuestion = function (Question $question) {
 
                                 <div class="flex gap-3 text-sm whitespace-nowrap">
                                     <button type="button" wire:click="openEdit({{ $question->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
-                                    <button type="button" wire:click="deleteQuestion({{ $question->id }})" wire:confirm="{{ __('Hapus soal ini?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                    <button type="button" wire:click="confirmingDeleteId = {{ $question->id }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                 </div>
                             </div>
                         </div>
@@ -299,4 +304,10 @@ $deleteQuestion = function (Question $question) {
             </form>
         </div>
     </div>
+
+    <x-confirm-delete-modal
+        :title="__('Hapus Soal?')"
+        :message="__('Soal ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.')"
+        action="deleteQuestion"
+    />
 </div>

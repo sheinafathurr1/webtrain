@@ -17,6 +17,7 @@ state([
     'slug' => '',
     'description' => '',
     'order' => 0,
+    'confirmingDeleteId' => null,
 ]);
 
 mount(function (Course $course) {
@@ -74,8 +75,12 @@ $save = function () {
     $this->resetForm();
 };
 
-$delete = function (Module $module) {
-    $module->delete();
+$delete = function () {
+    if ($this->confirmingDeleteId) {
+        Module::find($this->confirmingDeleteId)?->delete();
+    }
+
+    $this->confirmingDeleteId = null;
 };
 
 ?>
@@ -118,7 +123,7 @@ $delete = function (Module $module) {
                                     <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
                                         <a href="{{ route('admin.lessons.index', $module) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Lesson') }}</a>
                                         <button wire:click="openEdit({{ $module->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
-                                        <button wire:click="delete({{ $module->id }})" wire:confirm="{{ __('Hapus module ini beserta seluruh lesson di dalamnya?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                        <button type="button" wire:click="confirmingDeleteId = {{ $module->id }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                     </td>
                                 </tr>
                             @empty
@@ -177,4 +182,9 @@ $delete = function (Module $module) {
             </form>
         </div>
     </div>
+
+    <x-confirm-delete-modal
+        :title="__('Hapus Module?')"
+        :message="__('Module ini beserta seluruh lesson di dalamnya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.')"
+    />
 </div>

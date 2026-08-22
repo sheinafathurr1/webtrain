@@ -145,7 +145,8 @@ class ContentCrudTest extends TestCase
         $this->actingAs($this->admin);
 
         Volt::test('pages.admin.tracks.index')
-            ->call('delete', $track->id);
+            ->set('confirmingDeleteId', $track->id)
+            ->call('delete');
 
         $this->assertDatabaseMissing('tracks', ['id' => $track->id]);
         $this->assertDatabaseMissing('courses', ['id' => $course->id]);

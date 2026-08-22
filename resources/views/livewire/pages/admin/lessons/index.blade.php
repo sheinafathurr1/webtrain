@@ -26,6 +26,7 @@ state([
     'exercise_starter_code' => '',
     'exercise_expected_output' => '',
     'exercise_solution_code' => '',
+    'confirmingDeleteId' => null,
 ]);
 
 mount(function (Module $module) {
@@ -129,8 +130,12 @@ $save = function () {
     $this->resetForm();
 };
 
-$delete = function (Lesson $lesson) {
-    $lesson->delete();
+$delete = function () {
+    if ($this->confirmingDeleteId) {
+        Lesson::find($this->confirmingDeleteId)?->delete();
+    }
+
+    $this->confirmingDeleteId = null;
 };
 
 ?>
@@ -179,7 +184,7 @@ $delete = function (Lesson $lesson) {
                                             <a href="{{ route('admin.quizzes.builder', $lesson) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Soal Quiz') }}</a>
                                         @endif
                                         <button wire:click="openEdit({{ $lesson->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
-                                        <button wire:click="delete({{ $lesson->id }})" wire:confirm="{{ __('Hapus lesson ini?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                        <button type="button" wire:click="confirmingDeleteId = {{ $lesson->id }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                     </td>
                                 </tr>
                             @empty
@@ -301,4 +306,9 @@ $delete = function (Lesson $lesson) {
             </form>
         </div>
     </div>
+
+    <x-confirm-delete-modal
+        :title="__('Hapus Lesson?')"
+        :message="__('Lesson ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.')"
+    />
 </div>
