@@ -3,13 +3,14 @@
 Platform belajar web development (dasar sampai advance) berbasis Laravel monolith, dengan struktur konten
 `Track > Course > Module > Lesson`, code playground interaktif, progress tracking, quiz, dan admin panel.
 
-Proyek ini dikembangkan bertahap. Status saat ini: **Fase 1 — Fondasi** (auth + role, struktur dasar).
+Proyek ini dikembangkan bertahap. Status saat ini: **Fase 2 — Struktur Course + Admin CRUD dasar** selesai
+(Fase 1: auth + role sudah selesai sebelumnya).
 
 ## Tech Stack
 
 - **Backend**: Laravel (stable terbaru, saat ini v13.x) + PHP 8.3+
 - **Database**: MySQL
-- **Frontend**: **Livewire 3 + Volt + Tailwind CSS v4** (lihat alasan pemilihan stack di bawah)
+- **Frontend**: **Livewire 3 + Volt + Tailwind CSS v3** (lihat alasan pemilihan stack di bawah)
 - **Auth**: Laravel Breeze (stack `livewire-functional`, dengan dukungan dark mode)
 - **Role & Permission**: [spatie/laravel-permission](https://spatie.be/docs/laravel-permission)
 
@@ -45,6 +46,30 @@ Menggunakan `spatie/laravel-permission` dengan role berbasis nama (guard `web`):
 
 Gate `access-admin-panel` (didefinisikan di `AppServiceProvider`) mengontrol siapa yang boleh melihat link
 "Admin Panel" di navigasi dan mengakses route `/admin/*` (middleware `role:Admin`).
+
+## Struktur Konten & Admin CMS
+
+Hierarki konten mengikuti `Track > Course > Module > Lesson`, masing-masing punya `slug` (auto-generate dari
+judul lewat trait `App\Models\Concerns\HasSlug`), `order`, dan (kecuali Module) flag `is_published`.
+
+- **Track** — jalur belajar (mis. "Frontend Fundamentals").
+- **Course** — punya flag tambahan `lock_lessons_sequentially` (toggle admin: siswa wajib selesaikan lesson
+  berurutan atau bebas). Penegakan aturan ini menyusul di Fase 3 saat progress tracking ada.
+- **Module** — bab di dalam course.
+- **Lesson** — punya `type`: `text` (markdown di kolom `content`), `video` (URL YouTube di `video_url`), atau
+  `exercise` (relasi one-to-one ke `lesson_exercises`: instruksi, starter code, solution code, expected
+  output). Tipe `quiz` menyusul di Fase 5 begitu tabel quiz ada.
+
+Admin CRUD-nya di `/admin/tracks` → `/admin/tracks/{track}/courses` → `/admin/courses/{course}/modules` →
+`/admin/modules/{module}/lessons`, masing-masing halaman Volt dengan list + modal form create/edit + delete
+(cascade: hapus track akan menghapus course/module/lesson di dalamnya).
+
+### Course contoh yang otomatis ter-seed
+
+`CourseContentSeeder` membuat course **"Belajar Web Dev dari Nol"** di bawah track "Frontend Fundamentals",
+lengkap dengan 3 module (HTML Dasar, CSS Dasar, JavaScript Dasar) x 3 lesson nyata per module (2 lesson teks
++ 1 lesson latihan coding dengan starter/solution code) — total 9 lesson siap pakai begitu `migrate --seed`
+dijalankan. Seeder ini idempotent (aman dijalankan ulang, tidak menduplikasi data).
 
 ## Instalasi
 
@@ -109,25 +134,28 @@ php artisan test
 ```
 app/
   Livewire/          Komponen Livewire class-based (Actions/Logout, dst.)
-  Models/            Eloquent models
+  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, User)
+  Models/Concerns/   Trait HasSlug (auto slug generation)
   Providers/          Service providers (Gate access-admin-panel didefinisikan di AppServiceProvider)
 routes/
   web.php            Route publik & dashboard
   auth.php           Route autentikasi (Breeze)
-  admin.php          Route admin panel (prefix /admin, middleware role:Admin)
+  admin.php          Route admin panel (prefix /admin, middleware role:Admin) — dashboard + CRUD konten
 resources/views/
-  livewire/pages/     Halaman full-page Volt (auth, admin, nantinya course/lesson)
-  livewire/layout/    Komponen navigasi
-  layouts/            Layout Blade (app, guest)
+  livewire/pages/admin/  Halaman full-page Volt CRUD: tracks, courses, modules, lessons
+  livewire/pages/auth/   Halaman full-page Volt auth (Breeze)
+  livewire/layout/       Komponen navigasi
+  layouts/               Layout Blade (app, guest)
 database/
-  seeders/            RoleSeeder, AdminUserSeeder, DatabaseSeeder
+  seeders/            RoleSeeder, AdminUserSeeder, CourseContentSeeder, DatabaseSeeder
 ```
 
 ## Roadmap Fase Berikutnya
 
-- **Fase 2** — Migration & model Track/Course/Module/Lesson, admin CRUD, seed course contoh ("Belajar Web Dev
-  dari Nol").
-- **Fase 3** — Halaman student (course listing, lesson viewer), dashboard, progress tracking.
+- ~~**Fase 1** — Fondasi: auth + role.~~ ✅
+- ~~**Fase 2** — Migration & model Track/Course/Module/Lesson, admin CRUD, seed course contoh.~~ ✅
+- **Fase 3** — Halaman student (course listing, lesson viewer), dashboard, progress tracking, penegakan
+  `lock_lessons_sequentially`.
 - **Fase 4** — Code playground (live preview HTML/CSS/JS).
-- **Fase 5** — Quiz & assessment dengan auto-grading.
+- **Fase 5** — Quiz & assessment dengan auto-grading (tipe lesson `quiz`).
 - **Fase 6** — Gamification (XP, badge, streak), sertifikat PDF, toggle dark mode manual, polish.
