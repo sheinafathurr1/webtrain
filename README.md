@@ -3,8 +3,8 @@
 Platform belajar web development (dasar sampai advance) berbasis Laravel monolith, dengan struktur konten
 `Track > Course > Module > Lesson`, code playground interaktif, progress tracking, quiz, dan admin panel.
 
-Proyek ini dikembangkan bertahap. Status saat ini: **Fase 3 — Halaman Student & Progress Tracking** selesai
-(Fase 1: auth + role, Fase 2: struktur course + admin CRUD, sudah selesai sebelumnya).
+Proyek ini dikembangkan bertahap. Status saat ini: **Fase 4 — Code Playground** selesai (Fase 1: auth + role,
+Fase 2: struktur course + admin CRUD, Fase 3: halaman student + progress tracking, sudah selesai sebelumnya).
 
 ## Tech Stack
 
@@ -31,9 +31,11 @@ Livewire + Volt dipilih dibanding Blade + Alpine murni karena:
   modal, toggle dark mode, kontrol UI code playground) tetap memakai Alpine seperti biasa.
 - Trade-off: sedikit overhead per-request dibanding Blade statis. Untuk skala platform belajar pribadi/kecil
   ini bukan masalah, dan kecepatan pengembangan jauh lebih penting mengingat besarnya cakupan fitur.
-- **Pengecualian**: Code Playground (live preview HTML/CSS/JS) akan berjalan murni di browser lewat iframe
-  sandboxed + JavaScript vanilla/Alpine — bagian ini memang tidak boleh bolak-balik ke server agar preview
-  terasa instan, jadi tidak memakai Livewire sama sekali.
+- **Pengecualian**: Code Playground (live preview HTML/CSS/JS) berjalan murni di browser lewat iframe
+  sandboxed + Alpine.js — bagian ini memang tidak boleh bolak-balik ke server agar preview terasa instan,
+  jadi tidak memakai Livewire sama sekali. Elemennya ditandai `wire:ignore` supaya re-render Livewire di
+  komponen sekitarnya (mis. klik "Tandai Selesai") tidak menghapus editor/preview yang sedang dikerjakan
+  siswa.
 
 ## Struktur Role
 
@@ -88,6 +90,24 @@ dijalankan. Seeder ini idempotent (aman dijalankan ulang, tidak menduplikasi dat
 Progress disimpan di tabel `user_progress` (`user_id`, `lesson_id`, unik per pasangan). Model `Course` punya
 helper `publishedLessons()`, `progressPercentFor()`, `nextLessonFor()`, dan `isLessonLockedFor()` yang dipakai
 di semua halaman ini agar logikanya konsisten di satu tempat.
+
+## Code Playground
+
+Lesson bertipe `exercise` menampilkan editor kode interaktif ([CodeMirror 6](https://codemirror.net/)) di
+samping preview langsung (iframe `sandbox="allow-scripts"`, tanpa `allow-same-origin` — origin iframe jadi
+opaque sehingga kode yang ditulis siswa tidak bisa mengakses cookie/localStorage/DOM halaman utama).
+
+- Perubahan di editor otomatis mengisi ulang preview (debounce 400ms).
+- **Reset** mengembalikan editor ke starter code; **Muat Solusi** mengisi editor dengan solution code.
+- Karena schema `lesson_exercises` hanya punya satu kolom `starter_code`, satu exercise = satu dokumen HTML
+  penuh (boleh berisi `<style>`/`<script>` di dalamnya) — bukan panel HTML/CSS/JS terpisah. Ini konsisten
+  dengan konten yang sudah di-seed.
+- CodeMirror **tidak** dibundel di entry JS global — komponen Alpine (`resources/js/app.js`, terdaftar lewat
+  `alpine:init`) me-*lazy-load*-nya lewat dynamic `import()`, jadi halaman lain (login, dashboard, admin, dst.)
+  tidak ikut memuat ~190KB (gzip) library ini.
+- Untuk materi PHP/Laravel (bukan HTML/CSS/JS), eksekusi live di browser tidak memungkinkan — sesuai catatan
+  awal, itu tetap jadi code viewer read-along; sandbox eksekusi PHP server-side adalah fase opsional terpisah,
+  di luar 6 fase utama ini.
 
 ## Instalasi
 
@@ -168,6 +188,8 @@ resources/views/
   livewire/pages/dashboard.blade.php  Dashboard student (progress + riwayat)
   livewire/layout/         Komponen navigasi (guest-aware)
   layouts/                 Layout Blade (app, guest)
+resources/js/
+  app.js              Komponen Alpine `codePlayground` (Code Playground, lazy-load CodeMirror)
 database/
   seeders/            RoleSeeder, AdminUserSeeder, CourseContentSeeder, DatabaseSeeder
 ```
@@ -177,6 +199,6 @@ database/
 - ~~**Fase 1** — Fondasi: auth + role.~~ ✅
 - ~~**Fase 2** — Migration & model Track/Course/Module/Lesson, admin CRUD, seed course contoh.~~ ✅
 - ~~**Fase 3** — Halaman student, dashboard, progress tracking, penegakan `lock_lessons_sequentially`.~~ ✅
-- **Fase 4** — Code playground (live preview HTML/CSS/JS) untuk lesson tipe `exercise`.
+- ~~**Fase 4** — Code playground (CodeMirror + live preview) untuk lesson tipe `exercise`.~~ ✅
 - **Fase 5** — Quiz & assessment dengan auto-grading (tipe lesson `quiz`).
 - **Fase 6** — Gamification (XP, badge, streak), sertifikat PDF, toggle dark mode manual, polish.

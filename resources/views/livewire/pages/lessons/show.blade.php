@@ -94,13 +94,6 @@ $toggleComplete = function () {
 
                         <p class="text-xs uppercase text-gray-400 tracking-wide">{{ __('Bahasa') }}: {{ $lesson->exercise->language }}</p>
 
-                        @if ($lesson->exercise->starter_code)
-                            <div>
-                                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">{{ __('Starter Code') }}</h3>
-                                <pre class="bg-gray-900 text-gray-100 text-sm rounded-md p-4 overflow-x-auto"><code>{{ $lesson->exercise->starter_code }}</code></pre>
-                            </div>
-                        @endif
-
                         @if ($lesson->exercise->expected_output)
                             <div>
                                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">{{ __('Expected Output') }}</h3>
@@ -108,10 +101,33 @@ $toggleComplete = function () {
                             </div>
                         @endif
 
+                        @if ($lesson->exercise->starter_code)
+                            <div
+                                wire:ignore
+                                data-playground
+                                x-data="codePlayground(@js($lesson->exercise->starter_code), @js($lesson->exercise->solution_code))"
+                            >
+                                <div class="flex items-center justify-between mb-1">
+                                    <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400">{{ __('Playground') }}</h3>
+                                    <div class="flex gap-3 text-xs">
+                                        @if ($lesson->exercise->solution_code)
+                                            <button type="button" @click="loadSolution()" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('Muat Solusi') }}</button>
+                                        @endif
+                                        <button type="button" @click="resetCode()" class="text-gray-500 dark:text-gray-400 hover:underline">{{ __('Reset') }}</button>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                    <div x-ref="editor" class="border border-gray-200 dark:border-gray-700 rounded-md overflow-auto text-sm" style="height: 22rem;"></div>
+                                    <iframe x-ref="preview" sandbox="allow-scripts" title="{{ __('Preview') }}" class="w-full border border-gray-200 dark:border-gray-700 rounded-md bg-white" style="height: 22rem;"></iframe>
+                                </div>
+                            </div>
+                        @endif
+
                         @if ($lesson->exercise->solution_code)
                             <div>
                                 <button type="button" wire:click="$toggle('showSolution')" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
-                                    {{ $showSolution ? __('Sembunyikan Solusi') : __('Lihat Solusi') }}
+                                    {{ $showSolution ? __('Sembunyikan Solusi (teks)') : __('Lihat Solusi (teks)') }}
                                 </button>
 
                                 @if ($showSolution)
@@ -119,10 +135,6 @@ $toggleComplete = function () {
                                 @endif
                             </div>
                         @endif
-
-                        <p class="text-xs text-gray-400">
-                            {{ __('Editor & live preview interaktif untuk latihan ini hadir di Fase 4 (Code Playground).') }}
-                        </p>
                     </div>
                 @endif
             </div>

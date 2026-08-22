@@ -18,5 +18,10 @@
     },
     "optionalDependencies": {
         "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "@codemirror/lang-html": "^6.4.12",
+        "@codemirror/theme-one-dark": "^6.1.3",
+        "codemirror": "^6.0.2"
     }
 }
