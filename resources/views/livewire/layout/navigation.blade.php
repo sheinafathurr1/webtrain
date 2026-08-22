@@ -46,7 +46,7 @@ $logout = function (Logout $logout) {
             <div class="flex items-center gap-2">
                 <button
                     type="button"
-                    x-data="{ dark: document.documentElement.classList.contains('dark') }"
+                    x-data="{ dark: (localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches) }"
                     x-init="$watch('dark', value => {
                         document.documentElement.classList.toggle('dark', value);
                         try { localStorage.setItem('theme', value ? 'dark' : 'light'); } catch (e) {}

@@ -153,6 +153,16 @@ $submitQuiz = function () {
     $this->quizAttempt = $attempt->load(['answers.question.options', 'answers.selectedOption']);
     $this->retaking = false;
 
+    $progress = UserProgress::firstOrCreate(
+        ['user_id' => Auth::id(), 'lesson_id' => $this->lesson->id],
+        ['completed_at' => now()]
+    );
+
+    if ($progress->wasRecentlyCreated) {
+        app(GamificationService::class)->recordLessonCompleted(Auth::user(), $this->lesson);
+        $this->completedLessonIds[] = $this->lesson->id;
+    }
+
     app(GamificationService::class)->recordQuizSubmitted(Auth::user());
 };
 
@@ -369,7 +379,15 @@ $retryQuiz = function () {
                     </div>
 
                     <div class="bg-surface border border-border rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
-                        @if ($this->isCompleted)
+                        @if ($lesson->type === Lesson::TYPE_QUIZ)
+                            @if ($this->isCompleted)
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-sm font-semibold text-brand">
+                                    <span>✓</span> {{ __('Selesai') }}
+                                </span>
+                            @else
+                                <span class="text-sm text-ink-muted">{{ __('Submit quiz di atas untuk menyelesaikan lesson ini.') }}</span>
+                            @endif
+                        @elseif ($this->isCompleted)
                             <button wire:click="toggleComplete" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/20 motion-safe:transition-colors duration-150">
                                 <span>✓</span> {{ __('Selesai — klik untuk batalkan') }}
                             </button>
