@@ -3,8 +3,8 @@
 Platform belajar web development (dasar sampai advance) berbasis Laravel monolith, dengan struktur konten
 `Track > Course > Module > Lesson`, code playground interaktif, progress tracking, quiz, dan admin panel.
 
-Proyek ini dikembangkan bertahap. Status saat ini: **Fase 2 — Struktur Course + Admin CRUD dasar** selesai
-(Fase 1: auth + role sudah selesai sebelumnya).
+Proyek ini dikembangkan bertahap. Status saat ini: **Fase 3 — Halaman Student & Progress Tracking** selesai
+(Fase 1: auth + role, Fase 2: struktur course + admin CRUD, sudah selesai sebelumnya).
 
 ## Tech Stack
 
@@ -54,7 +54,8 @@ judul lewat trait `App\Models\Concerns\HasSlug`), `order`, dan (kecuali Module) 
 
 - **Track** — jalur belajar (mis. "Frontend Fundamentals").
 - **Course** — punya flag tambahan `lock_lessons_sequentially` (toggle admin: siswa wajib selesaikan lesson
-  berurutan atau bebas). Penegakan aturan ini menyusul di Fase 3 saat progress tracking ada.
+  berurutan atau bebas). Ditegakkan di halaman lesson: lesson berikutnya terkunci (403) sampai lesson
+  sebelumnya (dalam urutan module → lesson) ditandai selesai.
 - **Module** — bab di dalam course.
 - **Lesson** — punya `type`: `text` (markdown di kolom `content`), `video` (URL YouTube di `video_url`), atau
   `exercise` (relasi one-to-one ke `lesson_exercises`: instruksi, starter code, solution code, expected
@@ -70,6 +71,23 @@ Admin CRUD-nya di `/admin/tracks` → `/admin/tracks/{track}/courses` → `/admi
 lengkap dengan 3 module (HTML Dasar, CSS Dasar, JavaScript Dasar) x 3 lesson nyata per module (2 lesson teks
 + 1 lesson latihan coding dengan starter/solution code) — total 9 lesson siap pakai begitu `migrate --seed`
 dijalankan. Seeder ini idempotent (aman dijalankan ulang, tidak menduplikasi data).
+
+## Halaman Student & Progress Tracking
+
+- **`/courses`** — daftar course yang dipublikasikan, dikelompokkan per track. Bisa diakses tanpa login.
+- **`/courses/{course}`** — detail course: deskripsi, progress bar (untuk user login), daftar module & lesson
+  dengan status (✓ selesai / 🔒 terkunci / ○ belum), tombol "Mulai/Lanjutkan Belajar" ke lesson berikutnya
+  yang belum selesai. Bisa diakses tanpa login (CTA mengarah ke halaman login).
+- **`/courses/{course}/lessons/{lesson}`** — halaman lesson (butuh login + email terverifikasi). Render
+  konten sesuai tipe (markdown untuk `text` via `Str::markdown()`, embed YouTube untuk `video`, instruksi +
+  starter/solution code untuk `exercise`), tombol "Tandai Selesai" (toggle, bisa dibatalkan), navigasi
+  sebelumnya/selanjutnya, dan mengembalikan 403 kalau lesson masih terkunci oleh `lock_lessons_sequentially`.
+- **`/dashboard`** — course yang sedang diambil (punya progress) dengan progress bar & tombol "Lanjut
+  Belajar", plus riwayat lesson yang sudah diselesaikan.
+
+Progress disimpan di tabel `user_progress` (`user_id`, `lesson_id`, unik per pasangan). Model `Course` punya
+helper `publishedLessons()`, `progressPercentFor()`, `nextLessonFor()`, dan `isLessonLockedFor()` yang dipakai
+di semua halaman ini agar logikanya konsisten di satu tempat.
 
 ## Instalasi
 
@@ -134,18 +152,22 @@ php artisan test
 ```
 app/
   Livewire/          Komponen Livewire class-based (Actions/Logout, dst.)
-  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, User)
+  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, UserProgress, User)
   Models/Concerns/   Trait HasSlug (auto slug generation)
   Providers/          Service providers (Gate access-admin-panel didefinisikan di AppServiceProvider)
 routes/
-  web.php            Route publik & dashboard
+  web.php            Route dasar (home, dashboard, profile) + require admin.php & courses.php
   auth.php           Route autentikasi (Breeze)
   admin.php          Route admin panel (prefix /admin, middleware role:Admin) — dashboard + CRUD konten
+  courses.php        Route student: /courses, /courses/{course}, /courses/{course}/lessons/{lesson}
 resources/views/
-  livewire/pages/admin/  Halaman full-page Volt CRUD: tracks, courses, modules, lessons
-  livewire/pages/auth/   Halaman full-page Volt auth (Breeze)
-  livewire/layout/       Komponen navigasi
-  layouts/               Layout Blade (app, guest)
+  livewire/pages/admin/    Halaman full-page Volt CRUD: tracks, courses, modules, lessons
+  livewire/pages/courses/  Halaman course listing & detail (student)
+  livewire/pages/lessons/  Halaman lesson viewer (student)
+  livewire/pages/auth/     Halaman full-page Volt auth (Breeze)
+  livewire/pages/dashboard.blade.php  Dashboard student (progress + riwayat)
+  livewire/layout/         Komponen navigasi (guest-aware)
+  layouts/                 Layout Blade (app, guest)
 database/
   seeders/            RoleSeeder, AdminUserSeeder, CourseContentSeeder, DatabaseSeeder
 ```
@@ -154,8 +176,7 @@ database/
 
 - ~~**Fase 1** — Fondasi: auth + role.~~ ✅
 - ~~**Fase 2** — Migration & model Track/Course/Module/Lesson, admin CRUD, seed course contoh.~~ ✅
-- **Fase 3** — Halaman student (course listing, lesson viewer), dashboard, progress tracking, penegakan
-  `lock_lessons_sequentially`.
-- **Fase 4** — Code playground (live preview HTML/CSS/JS).
+- ~~**Fase 3** — Halaman student, dashboard, progress tracking, penegakan `lock_lessons_sequentially`.~~ ✅
+- **Fase 4** — Code playground (live preview HTML/CSS/JS) untuk lesson tipe `exercise`.
 - **Fase 5** — Quiz & assessment dengan auto-grading (tipe lesson `quiz`).
 - **Fase 6** — Gamification (XP, badge, streak), sertifikat PDF, toggle dark mode manual, polish.
