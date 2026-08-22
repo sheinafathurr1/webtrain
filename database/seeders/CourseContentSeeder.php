@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Module;
+use App\Models\Question;
+use App\Models\Quiz;
 use App\Models\Track;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -148,6 +150,56 @@ HTML,
 </html>
 HTML,
             expectedOutput: 'Halaman menampilkan judul besar "Halo, Dunia!" diikuti paragraf "Ini halaman pertama saya." di bawahnya.',
+        );
+
+        $quizLesson = $this->lesson($module, 4, 'Quiz: HTML Dasar', Lesson::TYPE_QUIZ);
+
+        $quiz = Quiz::updateOrCreate(
+            ['lesson_id' => $quizLesson->id],
+            [
+                'title' => 'Quiz: HTML Dasar',
+                'description' => 'Uji pemahamanmu tentang dasar-dasar HTML dari module ini.',
+            ]
+        );
+
+        $q1 = Question::updateOrCreate(
+            ['quiz_id' => $quiz->id, 'order' => 1],
+            [
+                'type' => Question::TYPE_MULTIPLE_CHOICE,
+                'question_text' => 'Apa kepanjangan dari HTML?',
+                'explanation' => 'HTML adalah singkatan dari HyperText Markup Language, bahasa markup untuk menyusun struktur halaman web.',
+            ]
+        );
+        $q1->options()->delete();
+        $q1->options()->createMany([
+            ['option_text' => 'HyperText Markup Language', 'is_correct' => true, 'order' => 1],
+            ['option_text' => 'High Tech Modern Language', 'is_correct' => false, 'order' => 2],
+            ['option_text' => 'Home Tool Markup Language', 'is_correct' => false, 'order' => 3],
+        ]);
+
+        $q2 = Question::updateOrCreate(
+            ['quiz_id' => $quiz->id, 'order' => 2],
+            [
+                'type' => Question::TYPE_MULTIPLE_CHOICE,
+                'question_text' => 'Tag HTML mana yang digunakan untuk membuat tautan/link?',
+                'explanation' => 'Tag <a> (anchor) dengan atribut href digunakan untuk membuat tautan ke halaman lain.',
+            ]
+        );
+        $q2->options()->delete();
+        $q2->options()->createMany([
+            ['option_text' => '<link>', 'is_correct' => false, 'order' => 1],
+            ['option_text' => '<a>', 'is_correct' => true, 'order' => 2],
+            ['option_text' => '<href>', 'is_correct' => false, 'order' => 3],
+        ]);
+
+        Question::updateOrCreate(
+            ['quiz_id' => $quiz->id, 'order' => 3],
+            [
+                'type' => Question::TYPE_SHORT_ANSWER,
+                'question_text' => 'Tag HTML apa yang digunakan untuk judul level 1 (paling penting)? Tulis tanpa tanda kurung siku, mis. "p".',
+                'correct_answer' => 'h1',
+                'explanation' => 'Tag <h1> adalah heading level 1, biasanya judul utama sebuah halaman.',
+            ]
         );
     }
 

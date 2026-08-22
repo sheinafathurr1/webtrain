@@ -21,7 +21,9 @@ class Lesson extends Model
 
     public const TYPE_EXERCISE = 'exercise';
 
-    public const TYPES = [self::TYPE_TEXT, self::TYPE_VIDEO, self::TYPE_EXERCISE];
+    public const TYPE_QUIZ = 'quiz';
+
+    public const TYPES = [self::TYPE_TEXT, self::TYPE_VIDEO, self::TYPE_EXERCISE, self::TYPE_QUIZ];
 
     protected function casts(): array
     {
@@ -38,6 +40,11 @@ class Lesson extends Model
     public function exercise(): HasOne
     {
         return $this->hasOne(LessonExercise::class);
+    }
+
+    public function quiz(): HasOne
+    {
+        return $this->hasOne(Quiz::class);
     }
 
     public function progress(): HasMany

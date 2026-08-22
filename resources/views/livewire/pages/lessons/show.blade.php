@@ -2,6 +2,9 @@
 
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\Question;
+use App\Models\QuizAnswer;
+use App\Models\QuizAttempt;
 use App\Models\UserProgress;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -10,7 +13,14 @@ use function Livewire\Volt\{computed, layout, mount, state};
 
 layout('layouts.app');
 
-state(['course' => null, 'lesson' => null, 'showSolution' => false]);
+state([
+    'course' => null,
+    'lesson' => null,
+    'showSolution' => false,
+    'quizAnswers' => [],
+    'quizAttempt' => null,
+    'retaking' => false,
+]);
 
 mount(function (Course $course, Lesson $lesson) {
     abort_unless($course->is_published && $lesson->is_published, 404);
@@ -26,7 +36,31 @@ mount(function (Course $course, Lesson $lesson) {
 
     $this->course = $course;
     $this->lesson = $lesson;
+
+    if ($lesson->type === Lesson::TYPE_QUIZ) {
+        $lesson->load('quiz.questions.options');
+
+        if ($lesson->quiz) {
+            $this->quizAttempt = QuizAttempt::with(['answers.question.options', 'answers.selectedOption'])
+                ->where('quiz_id', $lesson->quiz->id)
+                ->where('user_id', Auth::id())
+                ->latest('submitted_at')
+                ->first();
+
+            if (! $this->quizAttempt) {
+                $this->resetQuizAnswers();
+            }
+        }
+    }
 });
+
+$resetQuizAnswers = function () {
+    $this->quizAnswers = [];
+
+    foreach ($this->lesson->quiz->questions as $question) {
+        $this->quizAnswers[$question->id] = ['selected_option_id' => null, 'answer_text' => ''];
+    }
+};
 
 $orderedLessons = computed(fn () => $this->course->publishedLessons()->values());
 
@@ -50,6 +84,68 @@ $toggleComplete = function () {
             'completed_at' => now(),
         ]);
     }
+};
+
+$submitQuiz = function () {
+    $questions = $this->lesson->quiz->questions;
+
+    foreach ($questions as $question) {
+        $answer = $this->quizAnswers[$question->id] ?? [];
+
+        $unanswered = $question->type === Question::TYPE_MULTIPLE_CHOICE
+            ? blank($answer['selected_option_id'] ?? null)
+            : blank($answer['answer_text'] ?? null);
+
+        if ($unanswered) {
+            $this->addError('quizAnswers', __('Jawab semua soal sebelum submit.'));
+
+            return;
+        }
+    }
+
+    $correctCount = 0;
+    $graded = [];
+
+    foreach ($questions as $question) {
+        $answer = $this->quizAnswers[$question->id];
+        $selectedOptionId = $answer['selected_option_id'] ? (int) $answer['selected_option_id'] : null;
+        $isCorrect = $question->isAnswerCorrect($selectedOptionId, $answer['answer_text'] ?: null);
+
+        if ($isCorrect) {
+            $correctCount++;
+        }
+
+        $graded[] = [
+            'question_id' => $question->id,
+            'selected_option_id' => $selectedOptionId,
+            'answer_text' => $answer['answer_text'] ?: null,
+            'is_correct' => $isCorrect,
+        ];
+    }
+
+    $total = $questions->count();
+
+    $attempt = QuizAttempt::create([
+        'quiz_id' => $this->lesson->quiz->id,
+        'user_id' => Auth::id(),
+        'score' => $total > 0 ? (int) round($correctCount / $total * 100) : 0,
+        'correct_count' => $correctCount,
+        'total_questions' => $total,
+        'submitted_at' => now(),
+    ]);
+
+    foreach ($graded as $row) {
+        $attempt->answers()->create($row);
+    }
+
+    $this->quizAttempt = $attempt->load(['answers.question.options', 'answers.selectedOption']);
+    $this->retaking = false;
+};
+
+$retryQuiz = function () {
+    $this->quizAttempt = null;
+    $this->retaking = true;
+    $this->resetQuizAnswers();
 };
 
 ?>
@@ -134,6 +230,86 @@ $toggleComplete = function () {
                                     <pre class="mt-2 bg-gray-900 text-gray-100 text-sm rounded-md p-4 overflow-x-auto"><code>{{ $lesson->exercise->solution_code }}</code></pre>
                                 @endif
                             </div>
+                        @endif
+                    </div>
+                @elseif ($lesson->type === Lesson::TYPE_QUIZ && $lesson->quiz)
+                    <div class="space-y-4">
+                        @if ($lesson->quiz->description)
+                            <div class="prose dark:prose-invert max-w-none">
+                                <p>{{ $lesson->quiz->description }}</p>
+                            </div>
+                        @endif
+
+                        @if ($lesson->quiz->questions->isEmpty())
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Quiz ini belum punya soal.') }}</p>
+                        @elseif ($quizAttempt && ! $retaking)
+                            <div class="bg-indigo-50 dark:bg-indigo-900/30 rounded-md p-4">
+                                <p class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{{ $quizAttempt->score }}%</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                    {{ $quizAttempt->correct_count }} {{ __('dari') }} {{ $quizAttempt->total_questions }} {{ __('soal benar') }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-4">
+                                @foreach ($quizAttempt->answers as $answer)
+                                    <div class="border rounded-md p-4 {{ $answer->is_correct ? 'border-green-300 dark:border-green-700' : 'border-red-300 dark:border-red-700' }}">
+                                        <p class="font-medium">{{ $loop->iteration }}. {{ $answer->question->question_text }}</p>
+
+                                        @if ($answer->question->type === Question::TYPE_MULTIPLE_CHOICE)
+                                            <p class="text-sm mt-1 {{ $answer->is_correct ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                                {{ __('Jawabanmu') }}: {{ $answer->selectedOption->option_text ?? '-' }}
+                                            </p>
+                                            @unless ($answer->is_correct)
+                                                <p class="text-sm text-green-600 dark:text-green-400">
+                                                    {{ __('Jawaban benar') }}: {{ $answer->question->options->firstWhere('is_correct', true)?->option_text }}
+                                                </p>
+                                            @endunless
+                                        @else
+                                            <p class="text-sm mt-1 {{ $answer->is_correct ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                                {{ __('Jawabanmu') }}: {{ $answer->answer_text }}
+                                            </p>
+                                            @unless ($answer->is_correct)
+                                                <p class="text-sm text-green-600 dark:text-green-400">{{ __('Jawaban benar') }}: {{ $answer->question->correct_answer }}</p>
+                                            @endunless
+                                        @endif
+
+                                        @if ($answer->question->explanation)
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                                <span class="font-medium">{{ __('Pembahasan') }}:</span> {{ $answer->question->explanation }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <x-secondary-button type="button" wire:click="retryQuiz">{{ __('Ulangi Quiz') }}</x-secondary-button>
+                        @else
+                            <form wire:submit="submitQuiz" class="space-y-6">
+                                @error('quizAnswers')
+                                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+
+                                @foreach ($lesson->quiz->questions as $question)
+                                    <div class="border border-gray-200 dark:border-gray-700 rounded-md p-4">
+                                        <p class="font-medium mb-2">{{ $loop->iteration }}. {{ $question->question_text }}</p>
+
+                                        @if ($question->type === Question::TYPE_MULTIPLE_CHOICE)
+                                            <div class="space-y-2">
+                                                @foreach ($question->options as $option)
+                                                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                        <input type="radio" wire:model="quizAnswers.{{ $question->id }}.selected_option_id" value="{{ $option->id }}">
+                                                        {{ $option->option_text }}
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <x-text-input wire:model="quizAnswers.{{ $question->id }}.answer_text" class="block w-full" type="text" placeholder="{{ __('Jawaban kamu') }}" />
+                                        @endif
+                                    </div>
+                                @endforeach
+
+                                <x-primary-button type="submit">{{ __('Submit Quiz') }}</x-primary-button>
+                            </form>
                         @endif
                     </div>
                 @endif

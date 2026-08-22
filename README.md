@@ -3,8 +3,9 @@
 Platform belajar web development (dasar sampai advance) berbasis Laravel monolith, dengan struktur konten
 `Track > Course > Module > Lesson`, code playground interaktif, progress tracking, quiz, dan admin panel.
 
-Proyek ini dikembangkan bertahap. Status saat ini: **Fase 4 — Code Playground** selesai (Fase 1: auth + role,
-Fase 2: struktur course + admin CRUD, Fase 3: halaman student + progress tracking, sudah selesai sebelumnya).
+Proyek ini dikembangkan bertahap. Status saat ini: **Fase 5 — Quiz & Assessment** selesai (Fase 1: auth +
+role, Fase 2: struktur course + admin CRUD, Fase 3: halaman student + progress tracking, Fase 4: code
+playground, sudah selesai sebelumnya).
 
 ## Tech Stack
 
@@ -59,20 +60,21 @@ judul lewat trait `App\Models\Concerns\HasSlug`), `order`, dan (kecuali Module) 
   berurutan atau bebas). Ditegakkan di halaman lesson: lesson berikutnya terkunci (403) sampai lesson
   sebelumnya (dalam urutan module → lesson) ditandai selesai.
 - **Module** — bab di dalam course.
-- **Lesson** — punya `type`: `text` (markdown di kolom `content`), `video` (URL YouTube di `video_url`), atau
-  `exercise` (relasi one-to-one ke `lesson_exercises`: instruksi, starter code, solution code, expected
-  output). Tipe `quiz` menyusul di Fase 5 begitu tabel quiz ada.
+- **Lesson** — punya `type`: `text` (markdown di kolom `content`), `video` (URL YouTube di `video_url`),
+  `exercise` (relasi one-to-one ke `lesson_exercises`), atau `quiz` (relasi one-to-one ke `quizzes`).
 
 Admin CRUD-nya di `/admin/tracks` → `/admin/tracks/{track}/courses` → `/admin/courses/{course}/modules` →
 `/admin/modules/{module}/lessons`, masing-masing halaman Volt dengan list + modal form create/edit + delete
-(cascade: hapus track akan menghapus course/module/lesson di dalamnya).
+(cascade: hapus track akan menghapus course/module/lesson di dalamnya). Lesson tipe `quiz` punya halaman
+builder terpisah, `/admin/lessons/{lesson}/quiz` — lihat bagian Quiz & Assessment di bawah.
 
 ### Course contoh yang otomatis ter-seed
 
 `CourseContentSeeder` membuat course **"Belajar Web Dev dari Nol"** di bawah track "Frontend Fundamentals",
-lengkap dengan 3 module (HTML Dasar, CSS Dasar, JavaScript Dasar) x 3 lesson nyata per module (2 lesson teks
-+ 1 lesson latihan coding dengan starter/solution code) — total 9 lesson siap pakai begitu `migrate --seed`
-dijalankan. Seeder ini idempotent (aman dijalankan ulang, tidak menduplikasi data).
+lengkap dengan 3 module (HTML Dasar, CSS Dasar, JavaScript Dasar). Module HTML Dasar punya 4 lesson (2 teks +
+1 latihan coding + 1 quiz), module CSS & JavaScript masing-masing 3 lesson (2 teks + 1 latihan coding) — total
+10 lesson siap pakai begitu `migrate --seed` dijalankan. Seeder ini idempotent (aman dijalankan ulang, tidak
+menduplikasi data).
 
 ## Halaman Student & Progress Tracking
 
@@ -108,6 +110,24 @@ opaque sehingga kode yang ditulis siswa tidak bisa mengakses cookie/localStorage
 - Untuk materi PHP/Laravel (bukan HTML/CSS/JS), eksekusi live di browser tidak memungkinkan — sesuai catatan
   awal, itu tetap jadi code viewer read-along; sandbox eksekusi PHP server-side adalah fase opsional terpisah,
   di luar 6 fase utama ini.
+
+## Quiz & Assessment
+
+Skema: `quizzes` (1:1 dengan lesson tipe `quiz`) → `questions` (`multiple_choice` atau `short_answer`, dengan
+`explanation`/pembahasan opsional) → `question_options` (untuk `multiple_choice`, satu `is_correct`). Setiap
+percobaan siswa tersimpan sebagai `quiz_attempts` + `quiz_answers` — histori tidak dihapus saat mengulang,
+jadi setiap attempt tercatat.
+
+- **Admin** (`/admin/lessons/{lesson}/quiz`): edit judul/deskripsi quiz, tambah/edit/hapus soal. Untuk
+  `multiple_choice`, opsi jawaban dikelola sebagai baris dinamis dengan radio "jawaban benar" (harus pilih
+  tepat satu); untuk `short_answer`, satu field jawaban benar.
+- **Auto-grading**: `multiple_choice` dicocokkan ke opsi yang `is_correct`; `short_answer` dicocokkan exact
+  match tanpa membedakan huruf besar/kecil (`Question::isAnswerCorrect()`). Skor = persentase soal benar.
+- **Siswa**: jawab semua soal (validasi menolak submit kalau ada yang kosong) → submit → langsung lihat skor,
+  jawaban benar/salah per soal, dan pembahasan. Kunjungan ulang ke lesson menampilkan hasil attempt terakhir
+  (bukan form kosong lagi); tombol **Ulangi Quiz** mulai attempt baru tanpa menghapus riwayat sebelumnya.
+- Progress lesson (`user_progress`) untuk quiz tetap pakai tombol "Tandai Selesai" yang sama seperti tipe
+  lesson lain — submit quiz tidak otomatis menandai lesson selesai, supaya perilakunya konsisten di semua tipe.
 
 ## Instalasi
 
@@ -172,7 +192,8 @@ php artisan test
 ```
 app/
   Livewire/          Komponen Livewire class-based (Actions/Logout, dst.)
-  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, UserProgress, User)
+  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, UserProgress,
+                     Quiz, Question, QuestionOption, QuizAttempt, QuizAnswer, User)
   Models/Concerns/   Trait HasSlug (auto slug generation)
   Providers/          Service providers (Gate access-admin-panel didefinisikan di AppServiceProvider)
 routes/
@@ -181,9 +202,9 @@ routes/
   admin.php          Route admin panel (prefix /admin, middleware role:Admin) — dashboard + CRUD konten
   courses.php        Route student: /courses, /courses/{course}, /courses/{course}/lessons/{lesson}
 resources/views/
-  livewire/pages/admin/    Halaman full-page Volt CRUD: tracks, courses, modules, lessons
+  livewire/pages/admin/    Halaman full-page Volt CRUD: tracks, courses, modules, lessons, quizzes/builder
   livewire/pages/courses/  Halaman course listing & detail (student)
-  livewire/pages/lessons/  Halaman lesson viewer (student)
+  livewire/pages/lessons/  Halaman lesson viewer (student, termasuk UI pengerjaan quiz)
   livewire/pages/auth/     Halaman full-page Volt auth (Breeze)
   livewire/pages/dashboard.blade.php  Dashboard student (progress + riwayat)
   livewire/layout/         Komponen navigasi (guest-aware)
@@ -200,5 +221,5 @@ database/
 - ~~**Fase 2** — Migration & model Track/Course/Module/Lesson, admin CRUD, seed course contoh.~~ ✅
 - ~~**Fase 3** — Halaman student, dashboard, progress tracking, penegakan `lock_lessons_sequentially`.~~ ✅
 - ~~**Fase 4** — Code playground (CodeMirror + live preview) untuk lesson tipe `exercise`.~~ ✅
-- **Fase 5** — Quiz & assessment dengan auto-grading (tipe lesson `quiz`).
+- ~~**Fase 5** — Quiz & assessment dengan auto-grading (tipe lesson `quiz`).~~ ✅
 - **Fase 6** — Gamification (XP, badge, streak), sertifikat PDF, toggle dark mode manual, polish.

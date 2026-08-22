@@ -99,7 +99,7 @@ class ProgressTrackingTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee($this->course->title)
-            ->assertSee('11%');
+            ->assertSee('10%');
     }
 
     public function test_dashboard_shows_empty_state_without_progress(): void

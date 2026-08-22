@@ -176,6 +176,9 @@ $delete = function (Lesson $lesson) {
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
+                                    @if ($lesson->type === \App\Models\Lesson::TYPE_QUIZ)
+                                        <a href="{{ route('admin.quizzes.builder', $lesson) }}" wire:navigate class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('Kelola Soal Quiz') }}</a>
+                                    @endif
                                     <button wire:click="openEdit({{ $lesson->id }})" class="text-gray-600 dark:text-gray-300 hover:underline">{{ __('Edit') }}</button>
                                     <button wire:click="delete({{ $lesson->id }})" wire:confirm="{{ __('Hapus lesson ini?') }}" class="text-red-600 dark:text-red-400 hover:underline">{{ __('Hapus') }}</button>
                                 </td>
@@ -279,6 +282,10 @@ $delete = function (Lesson $lesson) {
                             <textarea wire:model="exercise_expected_output" id="exercise_expected_output" rows="3" class="font-mono text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full"></textarea>
                         </div>
                     </div>
+                @elseif ($type === \App\Models\Lesson::TYPE_QUIZ)
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ __('Simpan lesson ini dulu, lalu kelola soal quiz lewat tombol "Kelola Soal Quiz" di daftar lesson.') }}
+                    </p>
                 @endif
 
                 <label class="inline-flex items-center">

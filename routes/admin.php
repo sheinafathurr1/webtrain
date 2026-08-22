@@ -13,4 +13,5 @@ Route::prefix('admin')
         Volt::route('tracks/{track}/courses', 'pages.admin.courses.index')->name('courses.index');
         Volt::route('courses/{course}/modules', 'pages.admin.modules.index')->name('modules.index');
         Volt::route('modules/{module}/lessons', 'pages.admin.lessons.index')->name('lessons.index');
+        Volt::route('lessons/{lesson}/quiz', 'pages.admin.quizzes.builder')->name('quizzes.builder');
     });
