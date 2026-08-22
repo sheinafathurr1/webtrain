@@ -163,16 +163,17 @@ $deleteQuestion = function (Question $question) {
 
 <div>
     <x-slot:header>
-        <p class="terminal-prompt">
-            <span class="seg-user">root@webtrain</span><span class="seg-sep">:~$</span>
-            <a href="{{ route('admin.lessons.index', $lesson->module_id) }}" wire:navigate class="hover:text-ink-primary transition-colors duration-150">cd lessons</a>/<span class="seg-cmd">{{ $lesson->slug }}/quiz</span>
+        <p class="text-sm text-ink-muted">
+            <a href="{{ route('admin.lessons.index', $lesson->module_id) }}" wire:navigate class="hover:text-brand font-medium motion-safe:transition-colors duration-150">{{ __('Lessons') }}</a>
+            <span class="mx-1">/</span>
+            <span class="text-ink-primary font-semibold">{{ $lesson->title }} — {{ __('Quiz') }}</span>
         </p>
     </x-slot:header>
 
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-surface border border-border-subtle rounded p-6">
-                <h3 class="font-display font-semibold text-ink-primary mb-4">{{ __('Informasi Quiz') }}</h3>
+            <div class="bg-surface border border-border rounded-2xl p-6">
+                <h3 class="font-display font-bold text-lg text-ink-primary mb-4">{{ __('Informasi Quiz') }}</h3>
 
                 <form wire:submit="saveQuizMeta" class="space-y-4">
                     <div>
@@ -183,43 +184,44 @@ $deleteQuestion = function (Question $question) {
 
                     <div>
                         <x-input-label for="quizDescription" :value="__('Instruksi/Deskripsi')" />
-                        <textarea wire:model="quizDescription" id="quizDescription" rows="2" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                        <textarea wire:model="quizDescription" id="quizDescription" rows="2" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                     </div>
 
                     <x-primary-button type="submit">{{ __('Simpan') }}</x-primary-button>
                 </form>
             </div>
 
-            <div class="bg-surface border border-border-subtle rounded p-6">
+            <div class="bg-surface border border-border rounded-2xl p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-display font-semibold text-ink-primary">{{ __('Soal') }} <span class="font-mono text-ink-muted">({{ $questions->count() }})</span></h3>
+                    <h3 class="font-display font-bold text-lg text-ink-primary">{{ __('Soal') }} <span class="text-ink-muted font-normal">({{ $questions->count() }})</span></h3>
                     <x-primary-button wire:click="openCreate">{{ __('+ Tambah Soal') }}</x-primary-button>
                 </div>
 
                 <div class="space-y-3">
                     @forelse ($questions as $question)
-                        <div wire:key="question-{{ $question->id }}" class="border border-border-subtle rounded p-4">
+                        <div wire:key="question-{{ $question->id }}" class="border border-border rounded-xl p-4">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <span class="font-mono text-xs uppercase text-ink-muted">{{ $question->type === \App\Models\Question::TYPE_MULTIPLE_CHOICE ? __('Pilihan Ganda') : __('Isian Singkat') }}</span>
-                                    <p class="mt-1 text-ink-primary">{{ $question->question_text }}</p>
+                                    <x-badge color="accent" class="uppercase">{{ $question->type === \App\Models\Question::TYPE_MULTIPLE_CHOICE ? __('Pilihan Ganda') : __('Isian Singkat') }}</x-badge>
+                                    <p class="mt-2 text-ink-primary">{{ $question->question_text }}</p>
 
                                     @if ($question->type === \App\Models\Question::TYPE_MULTIPLE_CHOICE)
                                         <ul class="mt-2 space-y-1 text-sm text-ink-secondary">
                                             @foreach ($question->options as $option)
-                                                <li class="{{ $option->is_correct ? 'text-ink-primary font-medium' : '' }}">
-                                                    <span class="font-mono text-xs">{{ $option->is_correct ? '[x]' : '[ ]' }}</span> {{ $option->option_text }}
+                                                <li class="flex items-center gap-2 {{ $option->is_correct ? 'text-brand font-semibold' : '' }}">
+                                                    <span class="w-4 h-4 rounded-full {{ $option->is_correct ? 'bg-brand/20' : 'border border-border' }} flex items-center justify-center text-[9px] shrink-0">{{ $option->is_correct ? '✓' : '' }}</span>
+                                                    {{ $option->option_text }}
                                                 </li>
                                             @endforeach
                                         </ul>
                                     @else
-                                        <p class="mt-2 text-sm text-ink-secondary">{{ __('Jawaban benar') }}: <span class="font-mono">{{ $question->correct_answer }}</span></p>
+                                        <p class="mt-2 text-sm text-ink-secondary">{{ __('Jawaban benar') }}: <span class="font-mono font-semibold text-brand">{{ $question->correct_answer }}</span></p>
                                     @endif
                                 </div>
 
                                 <div class="flex gap-3 text-sm whitespace-nowrap">
-                                    <button type="button" wire:click="openEdit({{ $question->id }})" class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Edit') }}</button>
-                                    <button type="button" wire:click="deleteQuestion({{ $question->id }})" wire:confirm="{{ __('Hapus soal ini?') }}" class="text-danger hover:opacity-75 underline transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                    <button type="button" wire:click="openEdit({{ $question->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
+                                    <button type="button" wire:click="deleteQuestion({{ $question->id }})" wire:confirm="{{ __('Hapus soal ini?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                 </div>
                             </div>
                         </div>
@@ -232,17 +234,17 @@ $deleteQuestion = function (Question $question) {
     </div>
 
     <div x-show="$wire.showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto px-4 py-6">
-        <div class="fixed inset-0 bg-canvas opacity-75" wire:click="$set('showModal', false)"></div>
+        <div class="fixed inset-0 bg-black/50" wire:click="$set('showModal', false)"></div>
 
-        <div class="relative bg-surface border border-border-subtle rounded shadow-xl max-w-2xl mx-auto p-6 text-ink-primary">
-            <h3 class="font-display text-lg font-medium mb-4">
+        <div class="relative bg-surface border border-border rounded-2xl shadow-2xl max-w-2xl mx-auto p-6 text-ink-primary">
+            <h3 class="font-display text-lg font-bold mb-4">
                 {{ $editingQuestionId ? __('Edit Soal') : __('Soal Baru') }}
             </h3>
 
             <form wire:submit="saveQuestion" class="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                 <div>
                     <x-input-label for="qType" :value="__('Tipe Soal')" />
-                    <select wire:model.live="qType" id="qType" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full">
+                    <select wire:model.live="qType" id="qType" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full">
                         <option value="{{ \App\Models\Question::TYPE_MULTIPLE_CHOICE }}">{{ __('Pilihan Ganda') }}</option>
                         <option value="{{ \App\Models\Question::TYPE_SHORT_ANSWER }}">{{ __('Isian Singkat') }}</option>
                     </select>
@@ -250,7 +252,7 @@ $deleteQuestion = function (Question $question) {
 
                 <div>
                     <x-input-label for="questionText" :value="__('Pertanyaan')" />
-                    <textarea wire:model="questionText" id="questionText" rows="2" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                    <textarea wire:model="questionText" id="questionText" rows="2" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                     <x-input-error :messages="$errors->get('questionText')" class="mt-2" />
                 </div>
 
@@ -261,7 +263,7 @@ $deleteQuestion = function (Question $question) {
 
                         @foreach ($options as $index => $option)
                             <div class="flex items-center gap-2" wire:key="option-{{ $index }}">
-                                <input type="radio" wire:model="correctOptionIndex" value="{{ $index }}" name="correctOptionIndex" class="border-border-interactive text-ink-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary">
+                                <input type="radio" wire:model="correctOptionIndex" value="{{ $index }}" name="correctOptionIndex" class="border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                                 <x-text-input wire:model="options.{{ $index }}.text" class="block w-full" type="text" placeholder="{{ __('Teks opsi') }}" />
                                 @if (count($options) > 2)
                                     <button type="button" wire:click="removeOption({{ $index }})" class="text-danger text-sm px-2 hover:opacity-75 transition-opacity duration-150">&times;</button>
@@ -282,7 +284,7 @@ $deleteQuestion = function (Question $question) {
 
                 <div>
                     <x-input-label for="explanation" :value="__('Pembahasan (opsional, ditampilkan setelah quiz dinilai)')" />
-                    <textarea wire:model="explanation" id="explanation" rows="2" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                    <textarea wire:model="explanation" id="explanation" rows="2" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                 </div>
 
                 <div>

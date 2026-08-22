@@ -166,36 +166,37 @@ $retryQuiz = function () {
 
 <div>
     <x-slot:header>
-        <p class="terminal-prompt">
-            <span class="seg-user">guest@webtrain</span><span class="seg-sep">:~$</span>
-            <a href="{{ route('courses.show', $course) }}" wire:navigate class="hover:text-ink-primary transition-colors duration-150">cd {{ $course->slug }}</a>/<span class="seg-cmd">{{ $lesson->slug }}</span>
+        <p class="text-sm text-ink-muted">
+            <a href="{{ route('courses.show', $course) }}" wire:navigate class="hover:text-brand font-medium motion-safe:transition-colors duration-150">{{ $course->title }}</a>
+            <span class="mx-1">/</span>
+            <span class="text-ink-primary font-semibold">{{ $lesson->title }}</span>
         </p>
     </x-slot:header>
 
     <div class="py-12">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 items-start">
-                <!-- File-explorer sidebar -->
-                <aside class="bg-surface border border-border-subtle rounded p-4 lg:sticky lg:top-6 order-2 lg:order-1">
-                    <p class="font-mono text-xs uppercase tracking-widest text-ink-muted mb-3">{{ __('Lessons') }}</p>
+            <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-start">
+                <!-- Lesson list sidebar -->
+                <aside class="bg-surface border border-border rounded-2xl p-4 lg:sticky lg:top-6 order-2 lg:order-1">
+                    <p class="text-xs font-bold uppercase tracking-widest text-ink-muted mb-3">{{ __('Lessons') }}</p>
 
                     @foreach ($course->modules as $module)
                         <div class="mb-4 last:mb-0">
-                            <p class="tree-branch text-xs mb-1 truncate">{{ $module->title }}</p>
+                            <p class="text-xs font-bold text-ink-muted mb-1 truncate">{{ $module->title }}</p>
                             <ul class="space-y-0.5">
                                 @foreach ($module->lessons as $navLesson)
                                     <li>
                                         @if ($navLesson->id === $lesson->id)
-                                            <span class="tree-node-active block truncate text-sm px-2 py-1">{{ $navLesson->title }}</span>
+                                            <span class="flex items-center gap-2 truncate text-sm px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-brand to-accent text-white font-semibold">{{ $navLesson->title }}</span>
                                         @elseif (in_array($navLesson->id, $completedLessonIds) || ! $course->isLessonLockedFor($navLesson, auth()->user()))
-                                            <a href="{{ route('lessons.show', [$course, $navLesson]) }}" wire:navigate class="block truncate text-sm px-2 py-1 rounded text-ink-secondary hover:text-ink-primary hover:bg-canvas transition-colors duration-150">
-                                                <span class="font-mono text-xs text-ink-muted">{{ in_array($navLesson->id, $completedLessonIds) ? '[x]' : '[ ]' }}</span>
-                                                {{ $navLesson->title }}
+                                            <a href="{{ route('lessons.show', [$course, $navLesson]) }}" wire:navigate class="flex items-center gap-2 truncate text-sm px-2.5 py-1.5 rounded-xl text-ink-secondary hover:text-brand hover:bg-brand/5 motion-safe:transition-colors duration-150">
+                                                <span class="w-4 h-4 rounded-full {{ in_array($navLesson->id, $completedLessonIds) ? 'bg-brand/20 text-brand' : 'border border-border' }} flex items-center justify-center text-[9px] shrink-0">{{ in_array($navLesson->id, $completedLessonIds) ? '✓' : '' }}</span>
+                                                <span class="truncate">{{ $navLesson->title }}</span>
                                             </a>
                                         @else
-                                            <span class="block truncate text-sm px-2 py-1 text-ink-muted" title="{{ __('Terkunci') }}">
-                                                <span class="font-mono text-xs">[locked]</span>
-                                                {{ $navLesson->title }}
+                                            <span class="flex items-center gap-2 truncate text-sm px-2.5 py-1.5 text-ink-muted" title="{{ __('Terkunci') }}">
+                                                <span class="text-xs shrink-0">🔒</span>
+                                                <span class="truncate">{{ $navLesson->title }}</span>
                                             </span>
                                         @endif
                                     </li>
@@ -207,9 +208,9 @@ $retryQuiz = function () {
 
                 <!-- Main content -->
                 <div class="space-y-6 min-w-0 order-1 lg:order-2">
-                    <div class="bg-surface border border-border-subtle rounded p-6">
-                        <p class="font-mono text-xs uppercase tracking-widest text-ink-muted mb-2">{{ $lesson->type }}</p>
-                        <h1 class="font-display text-2xl font-bold mb-6 text-ink-primary">{{ $lesson->title }}</h1>
+                    <div class="bg-surface border border-border rounded-2xl p-6">
+                        <x-badge color="brand" class="uppercase mb-2">{{ $lesson->type }}</x-badge>
+                        <h1 class="font-display text-2xl sm:text-3xl font-extrabold mb-6 text-ink-primary">{{ $lesson->title }}</h1>
 
                         @if ($lesson->type === Lesson::TYPE_TEXT)
                             <div class="prose prose-neutral dark:prose-invert max-w-none">
@@ -236,11 +237,11 @@ $retryQuiz = function () {
                                     <p>{{ $lesson->exercise->instructions }}</p>
                                 </div>
 
-                                <p class="font-mono text-xs uppercase text-ink-muted tracking-wide">{{ __('Bahasa') }}: {{ $lesson->exercise->language }}</p>
+                                <x-badge color="accent" class="uppercase">{{ __('Bahasa') }}: {{ $lesson->exercise->language }}</x-badge>
 
                                 @if ($lesson->exercise->expected_output)
-                                    <div>
-                                        <h3 class="text-sm font-semibold text-ink-secondary mb-1">{{ __('Expected Output') }}</h3>
+                                    <div class="rounded-xl bg-gold/5 border border-gold/20 p-4">
+                                        <h3 class="text-sm font-bold text-gold mb-1">{{ __('Expected Output') }}</h3>
                                         <p class="text-sm text-ink-secondary">{{ $lesson->exercise->expected_output }}</p>
                                     </div>
                                 @endif
@@ -250,32 +251,33 @@ $retryQuiz = function () {
                                         wire:ignore
                                         data-playground
                                         x-data="codePlayground(@js($lesson->exercise->starter_code), @js($lesson->exercise->solution_code))"
+                                        class="rounded-2xl border border-border bg-canvas p-3"
                                     >
-                                        <div class="flex items-center justify-between mb-1">
-                                            <h3 class="text-sm font-semibold text-ink-secondary">{{ __('Playground') }}</h3>
+                                        <div class="flex items-center justify-between mb-1 px-1">
+                                            <h3 class="text-sm font-bold text-ink-secondary">{{ __('Playground') }}</h3>
                                             <div class="flex gap-3 text-xs">
                                                 @if ($lesson->exercise->solution_code)
-                                                    <button type="button" @click="loadSolution()" class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Muat Solusi') }}</button>
+                                                    <button type="button" @click="loadSolution()" class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Muat Solusi') }}</button>
                                                 @endif
-                                                <button type="button" @click="resetCode()" class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Reset') }}</button>
+                                                <button type="button" @click="resetCode()" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('↺ Reset') }}</button>
                                             </div>
                                         </div>
 
                                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                            <div x-ref="editor" class="border border-border-subtle rounded overflow-auto text-sm" style="height: 22rem;"></div>
-                                            <iframe x-ref="preview" sandbox="allow-scripts" title="{{ __('Preview') }}" class="w-full border border-border-subtle rounded bg-white" style="height: 22rem;"></iframe>
+                                            <div x-ref="editor" class="border border-border rounded-xl overflow-auto text-sm" style="height: 22rem;"></div>
+                                            <iframe x-ref="preview" sandbox="allow-scripts" title="{{ __('Preview') }}" class="w-full border border-border rounded-xl bg-white" style="height: 22rem;"></iframe>
                                         </div>
                                     </div>
                                 @endif
 
                                 @if ($lesson->exercise->solution_code)
                                     <div>
-                                        <button type="button" wire:click="$toggle('showSolution')" class="text-sm text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">
+                                        <button type="button" wire:click="$toggle('showSolution')" class="text-sm font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">
                                             {{ $showSolution ? __('Sembunyikan Solusi (teks)') : __('Lihat Solusi (teks)') }}
                                         </button>
 
                                         @if ($showSolution)
-                                            <pre class="mt-2 bg-canvas text-ink-primary text-sm rounded p-4 overflow-x-auto border border-border-subtle"><code>{{ $lesson->exercise->solution_code }}</code></pre>
+                                            <pre class="mt-2 bg-canvas text-ink-primary text-sm rounded-xl p-4 overflow-x-auto border border-border"><code>{{ $lesson->exercise->solution_code }}</code></pre>
                                         @endif
                                     </div>
                                 @endif
@@ -291,18 +293,18 @@ $retryQuiz = function () {
                                 @if ($lesson->quiz->questions->isEmpty())
                                     <p class="text-sm text-ink-secondary">{{ __('Quiz ini belum punya soal.') }}</p>
                                 @elseif ($quizAttempt && ! $retaking)
-                                    <div class="bg-canvas border border-border-subtle rounded p-4">
-                                        <p class="font-mono text-2xl font-bold text-ink-primary tabular-nums">{{ $quizAttempt->score }}%</p>
-                                        <p class="text-sm text-ink-secondary">
+                                    <div class="rounded-2xl p-5 bg-gradient-to-br from-brand to-accent text-white">
+                                        <p class="font-display text-4xl font-extrabold tabular-nums">{{ $quizAttempt->score }}%</p>
+                                        <p class="text-sm text-white/90 font-medium">
                                             {{ $quizAttempt->correct_count }} {{ __('dari') }} {{ $quizAttempt->total_questions }} {{ __('soal benar') }}
                                         </p>
                                     </div>
 
                                     <div class="space-y-4">
                                         @foreach ($quizAttempt->answers as $answer)
-                                            <div class="border border-border-subtle rounded p-4">
+                                            <div class="border rounded-xl p-4 {{ $answer->is_correct ? 'border-brand/30 bg-brand/5' : 'border-danger/30 bg-danger/5' }}">
                                                 <p class="font-medium text-ink-primary">
-                                                    <span class="font-mono text-xs {{ $answer->is_correct ? 'text-ink-primary' : 'text-danger' }}">{{ $answer->is_correct ? '[correct]' : '[incorrect]' }}</span>
+                                                    <x-badge :color="$answer->is_correct ? 'brand' : 'danger'">{{ $answer->is_correct ? __('Benar') : __('Salah') }}</x-badge>
                                                     {{ $loop->iteration }}. {{ $answer->question->question_text }}
                                                 </p>
 
@@ -337,18 +339,18 @@ $retryQuiz = function () {
                                 @else
                                     <form wire:submit="submitQuiz" class="space-y-6">
                                         @error('quizAnswers')
-                                            <p class="text-sm text-danger">{{ $message }}</p>
+                                            <p class="text-sm text-danger font-medium">{{ $message }}</p>
                                         @enderror
 
                                         @foreach ($lesson->quiz->questions as $question)
-                                            <div class="border border-border-subtle rounded p-4">
+                                            <div class="border border-border rounded-xl p-4">
                                                 <p class="font-medium mb-2 text-ink-primary">{{ $loop->iteration }}. {{ $question->question_text }}</p>
 
                                                 @if ($question->type === Question::TYPE_MULTIPLE_CHOICE)
                                                     <div class="space-y-2">
                                                         @foreach ($question->options as $option)
                                                             <label class="flex items-center gap-2 text-sm text-ink-secondary">
-                                                                <input type="radio" wire:model="quizAnswers.{{ $question->id }}.selected_option_id" value="{{ $option->id }}" class="border-border-interactive text-ink-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary">
+                                                                <input type="radio" wire:model="quizAnswers.{{ $question->id }}.selected_option_id" value="{{ $option->id }}" class="border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                                                                 {{ $option->option_text }}
                                                             </label>
                                                         @endforeach
@@ -366,10 +368,10 @@ $retryQuiz = function () {
                         @endif
                     </div>
 
-                    <div class="bg-surface border border-border-subtle rounded p-6 flex flex-wrap items-center justify-between gap-4">
+                    <div class="bg-surface border border-border rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
                         @if ($this->isCompleted)
-                            <button wire:click="toggleComplete" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded border border-border-interactive text-sm font-medium text-ink-primary hover:border-ink-primary transition-colors duration-150">
-                                <span class="font-mono text-xs">[done]</span> {{ __('Selesai — klik untuk batalkan') }}
+                            <button wire:click="toggleComplete" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/20 motion-safe:transition-colors duration-150">
+                                <span>✓</span> {{ __('Selesai — klik untuk batalkan') }}
                             </button>
                         @else
                             <x-primary-button wire:click="toggleComplete" type="button">{{ __('Tandai Selesai') }}</x-primary-button>

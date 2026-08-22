@@ -73,7 +73,7 @@ $delete = function (Track $track) {
 
 <div>
     <x-slot:header>
-        <p class="terminal-prompt"><span class="seg-user">root@webtrain</span><span class="seg-sep">:~$</span> <span class="seg-cmd">ls tracks/</span></p>
+        <h2 class="font-display font-extrabold text-2xl text-ink-primary">{{ __('Tracks') }}</h2>
     </x-slot:header>
 
     <div class="py-12">
@@ -82,38 +82,34 @@ $delete = function (Track $track) {
                 <x-primary-button wire:click="openCreate">{{ __('+ Track Baru') }}</x-primary-button>
             </div>
 
-            <div class="bg-surface border border-border-subtle rounded overflow-hidden">
+            <div class="bg-surface border border-border rounded-2xl overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-border-subtle">
+                    <table class="min-w-full divide-y divide-border">
                         <thead class="bg-canvas">
                             <tr>
-                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
-                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Course') }}</th>
-                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Course') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
                                 <th class="px-6 py-3"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-border-subtle">
+                        <tbody class="divide-y divide-border">
                             @forelse ($tracks as $track)
                                 <tr wire:key="track-{{ $track->id }}">
-                                    <td class="px-6 py-4 text-sm text-ink-primary">
+                                    <td class="px-6 py-4 text-sm text-ink-primary font-medium">
                                         {{ $track->title }}
                                         <div class="font-mono text-xs text-ink-muted">{{ $track->slug }}</div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-ink-secondary font-mono tabular-nums">
+                                    <td class="px-6 py-4 text-sm text-ink-secondary tabular-nums">
                                         {{ $track->courses_count }} course
                                     </td>
-                                    <td class="px-6 py-4 text-sm font-mono">
-                                        @if ($track->is_published)
-                                            <span class="text-ink-primary">[published]</span>
-                                        @else
-                                            <span class="text-ink-muted">[draft]</span>
-                                        @endif
+                                    <td class="px-6 py-4 text-sm">
+                                        <x-badge :color="$track->is_published ? 'brand' : 'muted'">{{ $track->is_published ? __('published') : __('draft') }}</x-badge>
                                     </td>
                                     <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
-                                        <a href="{{ route('admin.courses.index', $track) }}" wire:navigate class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Kelola Course') }}</a>
-                                        <button wire:click="openEdit({{ $track->id }})" class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Edit') }}</button>
-                                        <button wire:click="delete({{ $track->id }})" wire:confirm="{{ __('Hapus track ini beserta seluruh course di dalamnya?') }}" class="text-danger hover:opacity-75 underline transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                        <a href="{{ route('admin.courses.index', $track) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Course') }}</a>
+                                        <button wire:click="openEdit({{ $track->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
+                                        <button wire:click="delete({{ $track->id }})" wire:confirm="{{ __('Hapus track ini beserta seluruh course di dalamnya?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                     </td>
                                 </tr>
                             @empty
@@ -133,10 +129,10 @@ $delete = function (Track $track) {
     </div>
 
     <div x-show="$wire.showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto px-4 py-6">
-        <div class="fixed inset-0 bg-canvas opacity-75" wire:click="$set('showModal', false)"></div>
+        <div class="fixed inset-0 bg-black/50" wire:click="$set('showModal', false)"></div>
 
-        <div class="relative bg-surface border border-border-subtle rounded shadow-xl max-w-lg mx-auto p-6 text-ink-primary">
-            <h3 class="font-display text-lg font-medium mb-4">
+        <div class="relative bg-surface border border-border rounded-2xl shadow-2xl max-w-lg mx-auto p-6 text-ink-primary">
+            <h3 class="font-display text-lg font-bold mb-4">
                 {{ $editingId ? __('Edit Track') : __('Track Baru') }}
             </h3>
 
@@ -155,7 +151,7 @@ $delete = function (Track $track) {
 
                 <div>
                     <x-input-label for="description" :value="__('Deskripsi')" />
-                    <textarea wire:model="description" id="description" rows="3" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                    <textarea wire:model="description" id="description" rows="3" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                     <x-input-error :messages="$errors->get('description')" class="mt-2" />
                 </div>
 
@@ -168,7 +164,7 @@ $delete = function (Track $track) {
 
                     <div class="flex items-end pb-2">
                         <label class="inline-flex items-center">
-                            <input type="checkbox" wire:model="is_published" class="rounded-sm border-border-interactive text-ink-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary">
+                            <input type="checkbox" wire:model="is_published" class="rounded-sm border-2 border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                             <span class="ms-2 text-sm text-ink-secondary">{{ __('Publikasikan') }}</span>
                         </label>
                     </div>

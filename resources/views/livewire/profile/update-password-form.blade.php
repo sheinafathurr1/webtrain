@@ -41,7 +41,7 @@ $updatePassword = function () {
 
 <section>
     <header>
-        <h2 class="text-lg font-medium text-ink-primary">
+        <h2 class="font-display font-bold text-lg text-ink-primary">
             {{ __('Update Password') }}
         </h2>
 

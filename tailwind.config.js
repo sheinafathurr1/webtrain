@@ -15,29 +15,37 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                display: ['"IBM Plex Sans Condensed"', ...defaultTheme.fontFamily.sans],
-                sans: ['"IBM Plex Sans"', ...defaultTheme.fontFamily.sans],
-                mono: ['"IBM Plex Mono"', ...defaultTheme.fontFamily.mono],
+                display: ['"Baloo 2"', ...defaultTheme.fontFamily.sans],
+                sans: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+                mono: ['"Fira Code"', ...defaultTheme.fontFamily.mono],
             },
             colors: {
                 canvas: 'rgb(var(--color-canvas) / <alpha-value>)',
                 surface: 'rgb(var(--color-surface) / <alpha-value>)',
-                border: {
-                    subtle: 'rgb(var(--color-border-subtle) / <alpha-value>)',
-                    interactive: 'rgb(var(--color-border-interactive) / <alpha-value>)',
-                },
+                border: 'rgb(var(--color-border) / <alpha-value>)',
                 ink: {
                     muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
                     secondary: 'rgb(var(--color-text-secondary) / <alpha-value>)',
                     primary: 'rgb(var(--color-text-primary) / <alpha-value>)',
                 },
+                brand: {
+                    DEFAULT: 'rgb(var(--color-brand) / <alpha-value>)',
+                    dark: 'rgb(var(--color-brand-dark) / <alpha-value>)',
+                },
+                accent: {
+                    DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+                    dark: 'rgb(var(--color-accent-dark) / <alpha-value>)',
+                },
+                gold: {
+                    DEFAULT: 'rgb(var(--color-gold) / <alpha-value>)',
+                    dark: 'rgb(var(--color-gold-dark) / <alpha-value>)',
+                },
                 danger: {
                     DEFAULT: 'rgb(var(--color-danger) / <alpha-value>)',
-                    surface: 'rgb(var(--color-danger) / 0.08)',
                 },
             },
             borderRadius: {
-                DEFAULT: '5px',
+                DEFAULT: '0.75rem',
             },
         },
     },

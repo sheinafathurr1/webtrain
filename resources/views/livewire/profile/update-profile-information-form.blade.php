@@ -50,7 +50,7 @@ $sendVerification = function () {
 
 <section>
     <header>
-        <h2 class="text-lg font-medium text-ink-primary">
+        <h2 class="font-display font-bold text-lg text-ink-primary">
             {{ __('Profile Information') }}
         </h2>
 
@@ -76,13 +76,13 @@ $sendVerification = function () {
                     <p class="text-sm mt-2 text-ink-primary">
                         {{ __('Your email address is unverified.') }}
 
-                        <button wire:click.prevent="sendVerification" class="underline text-sm text-ink-secondary hover:text-ink-primary rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary transition-colors duration-150">
+                        <button wire:click.prevent="sendVerification" class="underline text-sm font-semibold text-brand hover:text-brand-dark rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand motion-safe:transition-colors duration-150">
                             {{ __('Click here to re-send the verification email.') }}
                         </button>
                     </p>
 
                     @if (session('status') === 'verification-link-sent')
-                        <p class="mt-2 font-medium text-sm text-ink-primary">
+                        <p class="mt-2 font-semibold text-sm text-brand">
                             {{ __('A new verification link has been sent to your email address.') }}
                         </p>
                     @endif

@@ -81,7 +81,7 @@ $register = function () {
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-ink-secondary hover:text-ink-primary rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary transition-colors duration-150" href="{{ route('login') }}" wire:navigate>
+            <a class="underline text-sm font-semibold text-brand hover:text-brand-dark rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand motion-safe:transition-colors duration-150" href="{{ route('login') }}" wire:navigate>
                 {{ __('Already registered?') }}
             </a>
 

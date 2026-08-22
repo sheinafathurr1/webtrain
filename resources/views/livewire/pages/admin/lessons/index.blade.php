@@ -136,9 +136,10 @@ $delete = function (Lesson $lesson) {
 
 <div>
     <x-slot:header>
-        <p class="terminal-prompt">
-            <span class="seg-user">root@webtrain</span><span class="seg-sep">:~$</span>
-            <a href="{{ route('admin.modules.index', $module->course_id) }}" wire:navigate class="hover:text-ink-primary transition-colors duration-150">cd modules</a>/<span class="seg-cmd">{{ $module->slug }}</span>
+        <p class="text-sm text-ink-muted">
+            <a href="{{ route('admin.modules.index', $module->course_id) }}" wire:navigate class="hover:text-brand font-medium motion-safe:transition-colors duration-150">{{ __('Modules') }}</a>
+            <span class="mx-1">/</span>
+            <span class="text-ink-primary font-semibold">{{ $module->title }}</span>
         </p>
     </x-slot:header>
 
@@ -148,40 +149,36 @@ $delete = function (Lesson $lesson) {
                 <x-primary-button wire:click="openCreate">{{ __('+ Lesson Baru') }}</x-primary-button>
             </div>
 
-            <div class="bg-surface border border-border-subtle rounded overflow-hidden">
+            <div class="bg-surface border border-border rounded-2xl overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-border-subtle">
+                    <table class="min-w-full divide-y divide-border">
                         <thead class="bg-canvas">
                             <tr>
-                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
-                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Tipe') }}</th>
-                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Tipe') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
                                 <th class="px-6 py-3"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-border-subtle">
+                        <tbody class="divide-y divide-border">
                             @forelse ($lessons as $lesson)
                                 <tr wire:key="lesson-{{ $lesson->id }}">
-                                    <td class="px-6 py-4 text-sm text-ink-primary">
+                                    <td class="px-6 py-4 text-sm text-ink-primary font-medium">
                                         {{ $lesson->title }}
                                         <div class="font-mono text-xs text-ink-muted">{{ $lesson->slug }}</div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-ink-secondary font-mono">
-                                        {{ $lesson->type }}
+                                    <td class="px-6 py-4 text-sm">
+                                        <x-badge color="accent">{{ $lesson->type }}</x-badge>
                                     </td>
-                                    <td class="px-6 py-4 text-sm font-mono">
-                                        @if ($lesson->is_published)
-                                            <span class="text-ink-primary">[published]</span>
-                                        @else
-                                            <span class="text-ink-muted">[draft]</span>
-                                        @endif
+                                    <td class="px-6 py-4 text-sm">
+                                        <x-badge :color="$lesson->is_published ? 'brand' : 'muted'">{{ $lesson->is_published ? __('published') : __('draft') }}</x-badge>
                                     </td>
                                     <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
                                         @if ($lesson->type === \App\Models\Lesson::TYPE_QUIZ)
-                                            <a href="{{ route('admin.quizzes.builder', $lesson) }}" wire:navigate class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Kelola Soal Quiz') }}</a>
+                                            <a href="{{ route('admin.quizzes.builder', $lesson) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Soal Quiz') }}</a>
                                         @endif
-                                        <button wire:click="openEdit({{ $lesson->id }})" class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Edit') }}</button>
-                                        <button wire:click="delete({{ $lesson->id }})" wire:confirm="{{ __('Hapus lesson ini?') }}" class="text-danger hover:opacity-75 underline transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                        <button wire:click="openEdit({{ $lesson->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
+                                        <button wire:click="delete({{ $lesson->id }})" wire:confirm="{{ __('Hapus lesson ini?') }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
                                     </td>
                                 </tr>
                             @empty
@@ -201,10 +198,10 @@ $delete = function (Lesson $lesson) {
     </div>
 
     <div x-show="$wire.showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto px-4 py-6">
-        <div class="fixed inset-0 bg-canvas opacity-75" wire:click="$set('showModal', false)"></div>
+        <div class="fixed inset-0 bg-black/50" wire:click="$set('showModal', false)"></div>
 
-        <div class="relative bg-surface border border-border-subtle rounded shadow-xl max-w-2xl mx-auto p-6 text-ink-primary">
-            <h3 class="font-display text-lg font-medium mb-4">
+        <div class="relative bg-surface border border-border rounded-2xl shadow-2xl max-w-2xl mx-auto p-6 text-ink-primary">
+            <h3 class="font-display text-lg font-bold mb-4">
                 {{ $editingId ? __('Edit Lesson') : __('Lesson Baru') }}
             </h3>
 
@@ -224,7 +221,7 @@ $delete = function (Lesson $lesson) {
                 <div class="flex gap-4">
                     <div class="flex-1">
                         <x-input-label for="type" :value="__('Tipe Lesson')" />
-                        <select wire:model.live="type" id="type" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full">
+                        <select wire:model.live="type" id="type" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full">
                             @foreach ($types as $t)
                                 <option value="{{ $t }}">{{ ucfirst($t) }}</option>
                             @endforeach
@@ -241,7 +238,7 @@ $delete = function (Lesson $lesson) {
                 @if ($type === \App\Models\Lesson::TYPE_TEXT)
                     <div>
                         <x-input-label for="content" :value="__('Konten (Markdown)')" />
-                        <textarea wire:model="content" id="content" rows="8" class="font-mono text-sm border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                        <textarea wire:model="content" id="content" rows="8" class="font-mono text-sm border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                         <x-input-error :messages="$errors->get('content')" class="mt-2" />
                     </div>
                 @elseif ($type === \App\Models\Lesson::TYPE_VIDEO)
@@ -251,10 +248,10 @@ $delete = function (Lesson $lesson) {
                         <x-input-error :messages="$errors->get('video_url')" class="mt-2" />
                     </div>
                 @elseif ($type === \App\Models\Lesson::TYPE_EXERCISE)
-                    <div class="space-y-4 border border-border-subtle rounded p-4">
+                    <div class="space-y-4 border border-border rounded-xl p-4">
                         <div>
                             <x-input-label for="exercise_language" :value="__('Bahasa')" />
-                            <select wire:model="exercise_language" id="exercise_language" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full">
+                            <select wire:model="exercise_language" id="exercise_language" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full">
                                 <option value="html">HTML</option>
                                 <option value="css">CSS</option>
                                 <option value="js">JavaScript</option>
@@ -265,23 +262,23 @@ $delete = function (Lesson $lesson) {
 
                         <div>
                             <x-input-label for="exercise_instructions" :value="__('Instruksi')" />
-                            <textarea wire:model="exercise_instructions" id="exercise_instructions" rows="3" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                            <textarea wire:model="exercise_instructions" id="exercise_instructions" rows="3" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                             <x-input-error :messages="$errors->get('exercise_instructions')" class="mt-2" />
                         </div>
 
                         <div>
                             <x-input-label for="exercise_starter_code" :value="__('Starter Code')" />
-                            <textarea wire:model="exercise_starter_code" id="exercise_starter_code" rows="5" class="font-mono text-sm border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                            <textarea wire:model="exercise_starter_code" id="exercise_starter_code" rows="5" class="font-mono text-sm border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                         </div>
 
                         <div>
                             <x-input-label for="exercise_solution_code" :value="__('Solution Code')" />
-                            <textarea wire:model="exercise_solution_code" id="exercise_solution_code" rows="5" class="font-mono text-sm border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                            <textarea wire:model="exercise_solution_code" id="exercise_solution_code" rows="5" class="font-mono text-sm border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                         </div>
 
                         <div>
                             <x-input-label for="exercise_expected_output" :value="__('Expected Output (deskripsi/HTML hasil akhir)')" />
-                            <textarea wire:model="exercise_expected_output" id="exercise_expected_output" rows="3" class="font-mono text-sm border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
+                            <textarea wire:model="exercise_expected_output" id="exercise_expected_output" rows="3" class="font-mono text-sm border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
                         </div>
                     </div>
                 @elseif ($type === \App\Models\Lesson::TYPE_QUIZ)
@@ -291,7 +288,7 @@ $delete = function (Lesson $lesson) {
                 @endif
 
                 <label class="inline-flex items-center">
-                    <input type="checkbox" wire:model="is_published" class="rounded-sm border-border-interactive text-ink-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary">
+                    <input type="checkbox" wire:model="is_published" class="rounded-sm border-2 border-border text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                     <span class="ms-2 text-sm text-ink-secondary">{{ __('Publikasikan') }}</span>
                 </label>
 

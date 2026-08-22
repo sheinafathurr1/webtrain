@@ -34,7 +34,7 @@ $logout = function (Logout $logout) {
     </div>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-ink-primary">
+        <div class="mb-4 font-semibold text-sm text-brand">
             {{ __('A new verification link has been sent to the email address you provided during registration.') }}
         </div>
     @endif
@@ -44,7 +44,7 @@ $logout = function (Logout $logout) {
             {{ __('Resend Verification Email') }}
         </x-primary-button>
 
-        <button wire:click="logout" type="submit" class="underline text-sm text-ink-secondary hover:text-ink-primary rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary transition-colors duration-150">
+        <button wire:click="logout" type="submit" class="underline text-sm font-semibold text-brand hover:text-brand-dark rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand motion-safe:transition-colors duration-150">
             {{ __('Log Out') }}
         </button>
     </div>

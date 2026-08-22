@@ -164,29 +164,29 @@ Sebelumnya dark mode hanya ikut preferensi OS (`prefers-color-scheme`). Sekarang
 - Script inline kecil di `<head>` (`layouts/partials/theme-init.blade.php`, di-include di kedua layout)
   yang membaca `localStorage` (fallback ke preferensi OS) dan langsung set class `dark` pada `<html>`
   **sebelum** CSS Tailwind dirender — mencegah flash of unstyled/wrong theme (FOUC).
-  - Tombol toggle (`[gelap]`/`[terang]`) di navigasi, murni Alpine (`x-data`/`x-init`/`$watch`), menyimpan
+  - Tombol toggle (ikon matahari/bulan) di navigasi, murni Alpine (`x-data`/`x-init`/`$watch`), menyimpan
   pilihan ke `localStorage` supaya konsisten di reload maupun navigasi antar halaman.
 
 ## Design System
 
-UI memakai identitas monokrom bergaya developer-tool, bukan template AI generik. Semua token hidup di
-`resources/css/app.css` (CSS variables RGB-triple untuk light/dark, di-swap lewat class `.dark`) dan
-`tailwind.config.js` (memetakan token itu ke warna semantik Tailwind: `canvas`, `surface`,
-`border-subtle`/`border-interactive`, `ink-muted`/`ink-secondary`/`ink-primary`, `danger`).
+UI memakai identitas colorful & playful yang terikat ke subjeknya sendiri: warna diambil dari tiga elemen
+inti web development (teal untuk brand/pertumbuhan, oranye untuk aksi/CTA, emas untuk XP & reward — selaras
+dengan sistem gamifikasi yang sudah ada), bukan palet AI generik. Semua token hidup di `resources/css/app.css`
+(CSS variables RGB-triple untuk light/dark, di-swap lewat class `.dark`) dan `tailwind.config.js` (memetakan
+token itu ke warna semantik Tailwind: `canvas`, `surface`, `border`, `ink-muted`/`ink-secondary`/`ink-primary`,
+`brand`, `accent`, `gold`, `danger`).
 
-- **Tipografi**: tiga peran font (IBM Plex Sans Condensed untuk display/heading, IBM Plex Sans untuk body,
-  IBM Plex Mono untuk data). Aturan konsisten: **monospace khusus untuk data yang dihasilkan sistem**
-  (breadcrumb, ID, slug, timestamp, persentase, status), **sans-serif untuk konten yang ditulis manusia**.
-- **Elemen khas**: breadcrumb bergaya terminal (`guest@webtrain:~$ ...`, dengan cursor berkedip yang
-  menghormati `prefers-reduced-motion`) di header tiap halaman, dan progress bar ASCII (`[████░░] 82%`, via
-  komponen `<x-ascii-bar>`) untuk progres course.
-  - **Komponen**: tombol hanya punya varian primary (blok terbalik), ghost (border tipis + bracket `[ ]`), dan
-  danger outline; status ditampilkan sebagai teks bracket (`[published]`, `[locked]`, `[done]`) alih-alih pill
-  berwarna; card border tipis, radius kecil, shadow hanya saat hover; focus ring 2px solid + offset 2px di
-  semua elemen interaktif untuk aksesibilitas.
-- **Layout khusus**: lesson viewer memakai layout dua panel bergaya IDE (sidebar file-explorer lesson +
-  konten utama, lesson aktif ditandai sebagai blok terbalik); dashboard/admin memakai grid kartu & tabel padat
-  dengan ID/slug/timestamp monospace.
+- **Tipografi**: tiga peran font (Baloo 2 yang bulat & playful untuk display/heading, Plus Jakarta Sans untuk
+  body, Fira Code untuk code block sungguhan).
+- **Elemen khas**: kartu rounded-2xl dengan hover-lift, badge pill berwarna (`<x-badge>`) untuk status,
+  progress bar gradien teal→oranye (`<x-progress-bar>`) untuk progres course, tombol pill dengan micro-interaction
+  (hover lift, active press) yang menghormati `prefers-reduced-motion` lewat varian `motion-safe:`.
+- **Komponen**: tombol primary (pill solid oranye), secondary (pill outline teal), danger (pill solid merah);
+  card border tipis rounded-2xl dengan shadow saat hover; focus ring 2px solid + offset 2px di semua elemen
+  interaktif untuk aksesibilitas.
+- **Layout khusus**: lesson viewer memakai layout dua panel (sidebar daftar lesson + konten utama, lesson aktif
+  ditandai gradien teal→oranye); dashboard menampilkan stat card bergradien lembut (XP emas, streak oranye,
+  badge teal) dan grid badge gamifikasi (warna penuh saat didapat, grayscale saat terkunci).
 
 ## Instalasi
 
