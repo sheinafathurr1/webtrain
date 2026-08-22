@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminUserSeeder::class,
             CourseContentSeeder::class,
+            BadgeSeeder::class,
         ]);
 
         $student = User::factory()->create([

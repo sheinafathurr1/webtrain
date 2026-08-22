@@ -6,6 +6,7 @@ use App\Models\Question;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\UserProgress;
+use App\Services\GamificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -83,6 +84,8 @@ $toggleComplete = function () {
             'lesson_id' => $this->lesson->id,
             'completed_at' => now(),
         ]);
+
+        app(GamificationService::class)->recordLessonCompleted(Auth::user(), $this->lesson);
     }
 };
 
@@ -140,6 +143,8 @@ $submitQuiz = function () {
 
     $this->quizAttempt = $attempt->load(['answers.question.options', 'answers.selectedOption']);
     $this->retaking = false;
+
+    app(GamificationService::class)->recordQuizSubmitted(Auth::user());
 };
 
 $retryQuiz = function () {

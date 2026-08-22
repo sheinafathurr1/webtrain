@@ -42,6 +42,23 @@ $logout = function (Logout $logout) {
                 </div>
             </div>
 
+            <div class="flex items-center">
+                <button
+                    type="button"
+                    x-data="{ dark: document.documentElement.classList.contains('dark') }"
+                    x-init="$watch('dark', value => {
+                        document.documentElement.classList.toggle('dark', value);
+                        try { localStorage.setItem('theme', value ? 'dark' : 'light'); } catch (e) {}
+                    })"
+                    @click="dark = ! dark"
+                    class="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none transition duration-150 ease-in-out"
+                    :aria-label="dark ? '{{ __('Aktifkan mode terang') }}' : '{{ __('Aktifkan mode gelap') }}'"
+                >
+                    <span x-show="!dark" x-cloak>🌙</span>
+                    <span x-show="dark" x-cloak>☀️</span>
+                </button>
+            </div>
+
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 @auth

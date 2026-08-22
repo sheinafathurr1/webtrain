@@ -89,6 +89,21 @@ class ProgressTrackingTest extends TestCase
         ]);
     }
 
+    public function test_marking_a_lesson_complete_awards_gamification_points(): void
+    {
+        $lesson = $this->course->publishedLessons()->first();
+
+        $this->actingAs($this->student);
+
+        Volt::test('pages.lessons.show', ['course' => $this->course, 'lesson' => $lesson])
+            ->call('toggleComplete');
+
+        $this->assertEquals(
+            \App\Services\GamificationService::POINTS_PER_LESSON,
+            $this->student->fresh()->total_points
+        );
+    }
+
     public function test_dashboard_shows_course_progress_after_completing_a_lesson(): void
     {
         $lesson = $this->course->publishedLessons()->first();

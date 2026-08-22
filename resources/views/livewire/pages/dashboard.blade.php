@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Badge;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\UserProgress;
@@ -10,6 +11,14 @@ use function Livewire\Volt\{layout, state};
 layout('layouts.app');
 
 state([
+    'badges' => function () {
+        $earnedBadgeIds = Auth::user()->userBadges()->pluck('badge_id');
+
+        return Badge::all()->map(fn (Badge $badge) => [
+            'badge' => $badge,
+            'earned' => $earnedBadgeIds->contains($badge->id),
+        ]);
+    },
     'courses' => function () {
         $completedLessonIds = UserProgress::where('user_id', Auth::id())->pluck('lesson_id');
 
@@ -46,6 +55,34 @@ state([
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total XP') }}</p>
+                    <p class="text-3xl font-semibold">{{ auth()->user()->total_points }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Streak Saat Ini') }}</p>
+                    <p class="text-3xl font-semibold">🔥 {{ auth()->user()->current_streak }} {{ __('hari') }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Streak Terpanjang') }}</p>
+                    <p class="text-3xl font-semibold">{{ auth()->user()->longest_streak }} {{ __('hari') }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
+                <h3 class="font-semibold mb-4">{{ __('Badge') }}</h3>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    @foreach ($badges as $item)
+                        <div class="text-center {{ $item['earned'] ? '' : 'opacity-30 grayscale' }}" title="{{ $item['badge']->description }}">
+                            <div class="text-4xl">{{ $item['badge']->icon }}</div>
+                            <p class="text-xs mt-1 text-gray-600 dark:text-gray-400">{{ $item['badge']->name }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
                 <h3 class="font-semibold mb-4">{{ __('Course Sedang Diambil') }}</h3>
 

@@ -54,11 +54,17 @@ mount(function (Course $course) {
                 </div>
 
                 @auth
-                    @php $next = $course->nextLessonFor(auth()->user()); @endphp
-                    @if ($next)
-                        <a href="{{ route('lessons.show', [$course, $next]) }}" wire:navigate class="inline-block mt-6">
-                            <x-primary-button>{{ $percent > 0 ? __('Lanjutkan Belajar') : __('Mulai Belajar') }}</x-primary-button>
+                    @if ($percent === 100)
+                        <a href="{{ route('courses.certificate', $course) }}" class="inline-block mt-6">
+                            <x-primary-button>{{ __('🎓 Download Sertifikat') }}</x-primary-button>
                         </a>
+                    @else
+                        @php $next = $course->nextLessonFor(auth()->user()); @endphp
+                        @if ($next)
+                            <a href="{{ route('lessons.show', [$course, $next]) }}" wire:navigate class="inline-block mt-6">
+                                <x-primary-button>{{ $percent > 0 ? __('Lanjutkan Belajar') : __('Mulai Belajar') }}</x-primary-button>
+                            </a>
+                        @endif
                     @endif
                 @else
                     <a href="{{ route('login') }}" wire:navigate class="inline-block mt-6">

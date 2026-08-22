@@ -3,9 +3,9 @@
 Platform belajar web development (dasar sampai advance) berbasis Laravel monolith, dengan struktur konten
 `Track > Course > Module > Lesson`, code playground interaktif, progress tracking, quiz, dan admin panel.
 
-Proyek ini dikembangkan bertahap. Status saat ini: **Fase 5 — Quiz & Assessment** selesai (Fase 1: auth +
-role, Fase 2: struktur course + admin CRUD, Fase 3: halaman student + progress tracking, Fase 4: code
-playground, sudah selesai sebelumnya).
+Proyek ini dikembangkan bertahap dan **keenam fase sudah selesai**: Fase 1 (auth + role), Fase 2 (struktur
+course + admin CRUD), Fase 3 (halaman student + progress tracking), Fase 4 (code playground), Fase 5 (quiz &
+assessment), Fase 6 (gamification, sertifikat, dark mode, polish).
 
 ## Tech Stack
 
@@ -129,6 +129,44 @@ jadi setiap attempt tercatat.
 - Progress lesson (`user_progress`) untuk quiz tetap pakai tombol "Tandai Selesai" yang sama seperti tipe
   lesson lain — submit quiz tidak otomatis menandai lesson selesai, supaya perilakunya konsisten di semua tipe.
 
+## Gamification, Sertifikat & Dark Mode
+
+### XP, streak, dan badge
+
+- **XP**: menyelesaikan lesson apa pun (toggle "Tandai Selesai") memberi `GamificationService::POINTS_PER_LESSON`
+  (10) poin sekali per lesson — mengulang toggle on/off tidak melipatgandakan poin. Riwayatnya tercatat di
+  `point_transactions`; totalnya didenormalisasi ke `users.total_points` untuk tampilan cepat.
+- **Streak harian**: `users.current_streak`/`longest_streak`/`last_activity_date` diperbarui tiap kali
+  menyelesaikan lesson — hari berturutan menambah streak, ada jeda mereset ke 1, hari yang sama tidak
+  dihitung dua kali.
+- **Badge**: dicek otomatis setiap lesson selesai atau quiz disubmit (`GamificationService::checkBadges()`),
+  berdasar `criteria_type` (`lessons_completed`, `course_completed`, `quiz_perfect_score`, `streak_days`).
+  6 badge sudah di-seed lewat `BadgeSeeder`: Langkah Pertama, Rajin Belajar, Penakluk Course, Jagoan Quiz,
+  Streak 3 Hari, Streak 7 Hari.
+- **Desain yang disengaja**: poin/badge/streak adalah *one-way ratchet* — membatalkan progress lesson
+  ("Tandai Selesai" → klik lagi untuk batalkan) tidak menarik kembali poin atau mencabut badge yang sudah
+  didapat. Ini menghindari logika pembalikan yang rumit (rekalkulasi streak dari histori, dsb.) dan konsisten
+  dengan pola umum di LMS/aplikasi gamifikasi lain.
+- Semuanya tampil di `/dashboard`: total XP, streak saat ini & terpanjang, grid badge (yang belum didapat
+  ditampilkan pudar/grayscale, bukan disembunyikan — supaya siswa tahu apa yang bisa dikejar).
+
+### Sertifikat PDF
+
+`/courses/{course}/certificate` (route biasa lewat `CertificateController`, bukan Livewire — cocok untuk aksi
+download sekali-jalan) men-generate PDF (via `barryvdh/laravel-dompdf`) berisi nama siswa, judul course, dan
+tanggal lesson terakhir diselesaikan. Diblokir (403) sampai `progressPercentFor()` course tersebut mencapai
+100%. Tombol **"🎓 Download Sertifikat"** otomatis muncul di halaman course begitu progress 100%.
+
+### Dark Mode manual
+
+Sebelumnya dark mode hanya ikut preferensi OS (`prefers-color-scheme`). Sekarang Tailwind pakai strategi
+`darkMode: 'class'`, dengan:
+- Script inline kecil di `<head>` (`layouts/partials/theme-init.blade.php`, di-include di kedua layout)
+  yang membaca `localStorage` (fallback ke preferensi OS) dan langsung set class `dark` pada `<html>`
+  **sebelum** CSS Tailwind dirender — mencegah flash of unstyled/wrong theme (FOUC).
+  - Tombol toggle (🌙/☀️) di navigasi, murni Alpine (`x-data`/`x-init`/`$watch`), menyimpan pilihan ke
+  `localStorage` supaya konsisten di reload maupun navigasi antar halaman.
+
 ## Instalasi
 
 ### Kebutuhan
@@ -191,35 +229,53 @@ php artisan test
 
 ```
 app/
+  Http/Controllers/  CertificateController (download PDF sertifikat, single-action, bukan Livewire)
   Livewire/          Komponen Livewire class-based (Actions/Logout, dst.)
   Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, UserProgress,
-                     Quiz, Question, QuestionOption, QuizAttempt, QuizAnswer, User)
+                     Quiz, Question, QuestionOption, QuizAttempt, QuizAnswer,
+                     PointTransaction, Badge, UserBadge, User)
   Models/Concerns/   Trait HasSlug (auto slug generation)
   Providers/          Service providers (Gate access-admin-panel didefinisikan di AppServiceProvider)
+  Services/           GamificationService (poin, streak, badge — logic terpusat di satu tempat)
 routes/
   web.php            Route dasar (home, dashboard, profile) + require admin.php & courses.php
   auth.php           Route autentikasi (Breeze)
   admin.php          Route admin panel (prefix /admin, middleware role:Admin) — dashboard + CRUD konten
-  courses.php        Route student: /courses, /courses/{course}, /courses/{course}/lessons/{lesson}
+  courses.php        Route student: /courses, /courses/{course}, /courses/{course}/lessons/{lesson},
+                     /courses/{course}/certificate
 resources/views/
   livewire/pages/admin/    Halaman full-page Volt CRUD: tracks, courses, modules, lessons, quizzes/builder
   livewire/pages/courses/  Halaman course listing & detail (student)
   livewire/pages/lessons/  Halaman lesson viewer (student, termasuk UI pengerjaan quiz)
   livewire/pages/auth/     Halaman full-page Volt auth (Breeze)
-  livewire/pages/dashboard.blade.php  Dashboard student (progress + riwayat)
-  livewire/layout/         Komponen navigasi (guest-aware)
-  layouts/                 Layout Blade (app, guest)
+  livewire/pages/dashboard.blade.php  Dashboard student (progress, XP, streak, badge, riwayat)
+  livewire/layout/         Komponen navigasi (guest-aware, tombol toggle dark mode)
+  layouts/                 Layout Blade (app, guest) + partials/theme-init.blade.php (anti-FOUC)
+  certificates/            Template PDF sertifikat (di-render via dompdf)
 resources/js/
   app.js              Komponen Alpine `codePlayground` (Code Playground, lazy-load CodeMirror)
 database/
-  seeders/            RoleSeeder, AdminUserSeeder, CourseContentSeeder, DatabaseSeeder
+  seeders/            RoleSeeder, AdminUserSeeder, CourseContentSeeder, BadgeSeeder, DatabaseSeeder
 ```
 
-## Roadmap Fase Berikutnya
+## Roadmap
+
+Enam fase yang direncanakan semuanya sudah selesai:
 
 - ~~**Fase 1** — Fondasi: auth + role.~~ ✅
 - ~~**Fase 2** — Migration & model Track/Course/Module/Lesson, admin CRUD, seed course contoh.~~ ✅
 - ~~**Fase 3** — Halaman student, dashboard, progress tracking, penegakan `lock_lessons_sequentially`.~~ ✅
 - ~~**Fase 4** — Code playground (CodeMirror + live preview) untuk lesson tipe `exercise`.~~ ✅
 - ~~**Fase 5** — Quiz & assessment dengan auto-grading (tipe lesson `quiz`).~~ ✅
-- **Fase 6** — Gamification (XP, badge, streak), sertifikat PDF, toggle dark mode manual, polish.
+- ~~**Fase 6** — Gamification (XP, badge, streak), sertifikat PDF, toggle dark mode manual, polish.~~ ✅
+
+### Follow-up opsional (belum dikerjakan)
+
+Dua item dari daftar "Fitur Pendukung Lain" di spesifikasi awal sengaja belum dibangun supaya fase-fase inti
+di atas bisa selesai dengan kualitas terjaga, bukan tergesa dijejalkan:
+
+- **Search course** — kotak pencarian di halaman `/courses` untuk filter berdasarkan judul/deskripsi.
+- **Bookmark lesson** — tabel `bookmarks` (user_id, lesson_id) + tombol simpan di halaman lesson dan daftar
+  "Lesson Tersimpan" di dashboard.
+- Eksekusi PHP/Laravel live di browser (disebut di catatan teknis awal) tetap di luar cakupan — butuh sandbox
+  eksekusi server-side terpisah, bukan sekadar tambahan frontend.

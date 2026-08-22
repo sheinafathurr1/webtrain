@@ -36,4 +36,14 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(UserProgress::class);
     }
+
+    public function pointTransactions(): HasMany
+    {
+        return $this->hasMany(PointTransaction::class);
+    }
+
+    public function userBadges(): HasMany
+    {
+        return $this->hasMany(UserBadge::class);
+    }
 }
