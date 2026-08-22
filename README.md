@@ -155,7 +155,7 @@ jadi setiap attempt tercatat.
 `/courses/{course}/certificate` (route biasa lewat `CertificateController`, bukan Livewire — cocok untuk aksi
 download sekali-jalan) men-generate PDF (via `barryvdh/laravel-dompdf`) berisi nama siswa, judul course, dan
 tanggal lesson terakhir diselesaikan. Diblokir (403) sampai `progressPercentFor()` course tersebut mencapai
-100%. Tombol **"🎓 Download Sertifikat"** otomatis muncul di halaman course begitu progress 100%.
+100%. Tombol **"Download Sertifikat"** otomatis muncul di halaman course begitu progress 100%.
 
 ### Dark Mode manual
 
@@ -164,8 +164,29 @@ Sebelumnya dark mode hanya ikut preferensi OS (`prefers-color-scheme`). Sekarang
 - Script inline kecil di `<head>` (`layouts/partials/theme-init.blade.php`, di-include di kedua layout)
   yang membaca `localStorage` (fallback ke preferensi OS) dan langsung set class `dark` pada `<html>`
   **sebelum** CSS Tailwind dirender — mencegah flash of unstyled/wrong theme (FOUC).
-  - Tombol toggle (🌙/☀️) di navigasi, murni Alpine (`x-data`/`x-init`/`$watch`), menyimpan pilihan ke
-  `localStorage` supaya konsisten di reload maupun navigasi antar halaman.
+  - Tombol toggle (`[gelap]`/`[terang]`) di navigasi, murni Alpine (`x-data`/`x-init`/`$watch`), menyimpan
+  pilihan ke `localStorage` supaya konsisten di reload maupun navigasi antar halaman.
+
+## Design System
+
+UI memakai identitas monokrom bergaya developer-tool, bukan template AI generik. Semua token hidup di
+`resources/css/app.css` (CSS variables RGB-triple untuk light/dark, di-swap lewat class `.dark`) dan
+`tailwind.config.js` (memetakan token itu ke warna semantik Tailwind: `canvas`, `surface`,
+`border-subtle`/`border-interactive`, `ink-muted`/`ink-secondary`/`ink-primary`, `danger`).
+
+- **Tipografi**: tiga peran font (IBM Plex Sans Condensed untuk display/heading, IBM Plex Sans untuk body,
+  IBM Plex Mono untuk data). Aturan konsisten: **monospace khusus untuk data yang dihasilkan sistem**
+  (breadcrumb, ID, slug, timestamp, persentase, status), **sans-serif untuk konten yang ditulis manusia**.
+- **Elemen khas**: breadcrumb bergaya terminal (`guest@webtrain:~$ ...`, dengan cursor berkedip yang
+  menghormati `prefers-reduced-motion`) di header tiap halaman, dan progress bar ASCII (`[████░░] 82%`, via
+  komponen `<x-ascii-bar>`) untuk progres course.
+  - **Komponen**: tombol hanya punya varian primary (blok terbalik), ghost (border tipis + bracket `[ ]`), dan
+  danger outline; status ditampilkan sebagai teks bracket (`[published]`, `[locked]`, `[done]`) alih-alih pill
+  berwarna; card border tipis, radius kecil, shadow hanya saat hover; focus ring 2px solid + offset 2px di
+  semua elemen interaktif untuk aksesibilitas.
+- **Layout khusus**: lesson viewer memakai layout dua panel bergaya IDE (sidebar file-explorer lesson +
+  konten utama, lesson aktif ditandai sebagai blok terbalik); dashboard/admin memakai grid kartu & tabel padat
+  dengan ID/slug/timestamp monospace.
 
 ## Instalasi
 

@@ -19,17 +19,15 @@ state([
 
 <div>
     <x-slot:header>
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Admin Panel') }}
-        </h2>
+        <p class="terminal-prompt"><span class="seg-user">root@webtrain</span><span class="seg-sep">:~$</span> <span class="seg-cmd">sudo admin</span></p>
     </x-slot:header>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100 flex items-center justify-between">
+            <div class="bg-surface border border-border-subtle rounded p-6 flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                    <p>{{ __('Welcome to the WebTrain admin panel.') }}</p>
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    <p class="text-ink-primary">{{ __('Welcome to the WebTrain admin panel.') }}</p>
+                    <p class="mt-2 text-sm text-ink-secondary">
                         {{ __('Kelola jalur belajar, course, module, dan lesson di sini.') }}
                     </p>
                 </div>
@@ -38,18 +36,18 @@ state([
                 </a>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total Users') }}</p>
-                    <p class="text-3xl font-semibold">{{ $totalUsers }}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-surface border border-border-subtle rounded p-6">
+                    <p class="text-sm text-ink-secondary">{{ __('Total Users') }}</p>
+                    <p class="mt-1 font-mono text-3xl font-semibold text-ink-primary tabular-nums">{{ $totalUsers }}</p>
                 </div>
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total Tracks') }}</p>
-                    <p class="text-3xl font-semibold">{{ $totalTracks }}</p>
+                <div class="bg-surface border border-border-subtle rounded p-6">
+                    <p class="text-sm text-ink-secondary">{{ __('Total Tracks') }}</p>
+                    <p class="mt-1 font-mono text-3xl font-semibold text-ink-primary tabular-nums">{{ $totalTracks }}</p>
                 </div>
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total Courses') }}</p>
-                    <p class="text-3xl font-semibold">{{ $totalCourses }}</p>
+                <div class="bg-surface border border-border-subtle rounded p-6">
+                    <p class="text-sm text-ink-secondary">{{ __('Total Courses') }}</p>
+                    <p class="mt-1 font-mono text-3xl font-semibold text-ink-primary tabular-nums">{{ $totalCourses }}</p>
                 </div>
             </div>
         </div>

@@ -89,10 +89,10 @@ $delete = function (Course $course) {
 
 <div>
     <x-slot:header>
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            <a href="{{ route('admin.tracks.index') }}" wire:navigate class="text-gray-400 hover:underline">{{ __('Tracks') }}</a>
-            / {{ $track->title }}
-        </h2>
+        <p class="terminal-prompt">
+            <span class="seg-user">root@webtrain</span><span class="seg-sep">:~$</span>
+            <a href="{{ route('admin.tracks.index') }}" wire:navigate class="hover:text-ink-primary transition-colors duration-150">cd tracks</a>/<span class="seg-cmd">{{ $track->slug }}</span>
+        </p>
     </x-slot:header>
 
     <div class="py-12">
@@ -101,48 +101,50 @@ $delete = function (Course $course) {
                 <x-primary-button wire:click="openCreate">{{ __('+ Course Baru') }}</x-primary-button>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-900">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Judul') }}</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Module') }}</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Status') }}</th>
-                            <th class="px-6 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                        @forelse ($courses as $course)
-                            <tr wire:key="course-{{ $course->id }}">
-                                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                                    {{ $course->title }}
-                                    <div class="text-xs text-gray-400">{{ $course->slug }}</div>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                    {{ $course->modules_count }} module
-                                </td>
-                                <td class="px-6 py-4 text-sm">
-                                    @if ($course->is_published)
-                                        <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ __('Published') }}</span>
-                                    @else
-                                        <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ __('Draft') }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
-                                    <a href="{{ route('admin.modules.index', $course) }}" wire:navigate class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('Kelola Module') }}</a>
-                                    <button wire:click="openEdit({{ $course->id }})" class="text-gray-600 dark:text-gray-300 hover:underline">{{ __('Edit') }}</button>
-                                    <button wire:click="delete({{ $course->id }})" wire:confirm="{{ __('Hapus course ini beserta seluruh module & lesson di dalamnya?') }}" class="text-red-600 dark:text-red-400 hover:underline">{{ __('Hapus') }}</button>
-                                </td>
-                            </tr>
-                        @empty
+            <div class="bg-surface border border-border-subtle rounded overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-border-subtle">
+                        <thead class="bg-canvas">
                             <tr>
-                                <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    {{ __('Belum ada course di track ini.') }}
-                                </td>
+                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
+                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Module') }}</th>
+                                <th class="px-6 py-3 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
+                                <th class="px-6 py-3"></th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-border-subtle">
+                            @forelse ($courses as $course)
+                                <tr wire:key="course-{{ $course->id }}">
+                                    <td class="px-6 py-4 text-sm text-ink-primary">
+                                        {{ $course->title }}
+                                        <div class="font-mono text-xs text-ink-muted">{{ $course->slug }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-ink-secondary font-mono tabular-nums">
+                                        {{ $course->modules_count }} module
+                                    </td>
+                                    <td class="px-6 py-4 text-sm font-mono">
+                                        @if ($course->is_published)
+                                            <span class="text-ink-primary">[published]</span>
+                                        @else
+                                            <span class="text-ink-muted">[draft]</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
+                                        <a href="{{ route('admin.modules.index', $course) }}" wire:navigate class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Kelola Module') }}</a>
+                                        <button wire:click="openEdit({{ $course->id }})" class="text-ink-secondary hover:text-ink-primary underline transition-colors duration-150">{{ __('Edit') }}</button>
+                                        <button wire:click="delete({{ $course->id }})" wire:confirm="{{ __('Hapus course ini beserta seluruh module & lesson di dalamnya?') }}" class="text-danger hover:opacity-75 underline transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-sm text-ink-secondary">
+                                        {{ __('Belum ada course di track ini.') }}
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {{ $courses->links() }}
@@ -150,10 +152,10 @@ $delete = function (Course $course) {
     </div>
 
     <div x-show="$wire.showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto px-4 py-6">
-        <div class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" wire:click="$set('showModal', false)"></div>
+        <div class="fixed inset-0 bg-canvas opacity-75" wire:click="$set('showModal', false)"></div>
 
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg mx-auto p-6 text-gray-900 dark:text-gray-100">
-            <h3 class="text-lg font-medium mb-4">
+        <div class="relative bg-surface border border-border-subtle rounded shadow-xl max-w-lg mx-auto p-6 text-ink-primary">
+            <h3 class="font-display text-lg font-medium mb-4">
                 {{ $editingId ? __('Edit Course') : __('Course Baru') }}
             </h3>
 
@@ -166,13 +168,13 @@ $delete = function (Course $course) {
 
                 <div>
                     <x-input-label for="slug" :value="__('Slug (opsional, otomatis dari judul)')" />
-                    <x-text-input wire:model="slug" id="slug" class="block mt-1 w-full" type="text" />
+                    <x-text-input wire:model="slug" id="slug" class="block mt-1 w-full font-mono" type="text" />
                     <x-input-error :messages="$errors->get('slug')" class="mt-2" />
                 </div>
 
                 <div>
                     <x-input-label for="description" :value="__('Deskripsi')" />
-                    <textarea wire:model="description" id="description" rows="3" class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full"></textarea>
+                    <textarea wire:model="description" id="description" rows="3" class="border-border-interactive bg-surface text-ink-primary focus:border-ink-primary focus:ring-ink-primary rounded shadow-sm block mt-1 w-full"></textarea>
                     <x-input-error :messages="$errors->get('description')" class="mt-2" />
                 </div>
 
@@ -186,13 +188,13 @@ $delete = function (Course $course) {
 
                 <div class="space-y-2">
                     <label class="inline-flex items-center">
-                        <input type="checkbox" wire:model="is_published" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                        <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Publikasikan') }}</span>
+                        <input type="checkbox" wire:model="is_published" class="rounded-sm border-border-interactive text-ink-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary">
+                        <span class="ms-2 text-sm text-ink-secondary">{{ __('Publikasikan') }}</span>
                     </label>
 
                     <label class="flex items-center">
-                        <input type="checkbox" wire:model="lock_lessons_sequentially" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                        <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Kunci urutan lesson (siswa harus selesaikan berurutan)') }}</span>
+                        <input type="checkbox" wire:model="lock_lessons_sequentially" class="rounded-sm border-border-interactive text-ink-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-primary">
+                        <span class="ms-2 text-sm text-ink-secondary">{{ __('Kunci urutan lesson (siswa harus selesaikan berurutan)') }}</span>
                     </label>
                 </div>
 

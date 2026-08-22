@@ -2,6 +2,130 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    :root {
+        --color-canvas: 250 250 249;
+        --color-surface: 255 255 255;
+        --color-border-subtle: 227 227 224;
+        --color-border-interactive: 140 140 136;
+        --color-text-muted: 110 110 104;
+        --color-text-secondary: 85 85 79;
+        --color-text-primary: 23 23 21;
+        --color-danger: 185 28 28;
+    }
+
+    .dark {
+        --color-canvas: 11 11 12;
+        --color-surface: 21 21 23;
+        --color-border-subtle: 42 42 45;
+        --color-border-interactive: 92 92 99;
+        --color-text-muted: 140 140 145;
+        --color-text-secondary: 184 184 189;
+        --color-text-primary: 242 242 240;
+        --color-danger: 220 38 38;
+    }
+
+    ::selection {
+        background-color: rgb(var(--color-text-primary));
+        color: rgb(var(--color-canvas));
+    }
+
+    h1, h2, h3 {
+        text-wrap: balance;
+    }
+}
+
+@layer components {
+    /* Ghost button: bracket affordance instead of color, sharpens on hover/focus. */
+    .btn-ghost {
+        position: relative;
+    }
+    .btn-ghost::before,
+    .btn-ghost::after {
+        font-family: theme('fontFamily.mono');
+        color: rgb(var(--color-border-interactive));
+        transition: color 150ms ease;
+    }
+    .btn-ghost::before {
+        content: '[';
+        margin-inline-end: 0.4em;
+    }
+    .btn-ghost::after {
+        content: ']';
+        margin-inline-start: 0.4em;
+    }
+    .btn-ghost:hover::before,
+    .btn-ghost:hover::after,
+    .btn-ghost:focus-visible::before,
+    .btn-ghost:focus-visible::after {
+        color: rgb(var(--color-text-primary));
+    }
+
+    /* ASCII/terminal progress bar. --pct (0-100) drives the fill width via ch units. */
+    .ascii-bar {
+        font-family: theme('fontFamily.mono');
+        font-variant-numeric: tabular-nums;
+        font-size: 0.875rem;
+        white-space: pre;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5em;
+    }
+    .ascii-bar-track {
+        color: rgb(var(--color-border-interactive));
+    }
+    .ascii-bar-fill {
+        color: rgb(var(--color-text-primary));
+    }
+    .ascii-bar-pct {
+        color: rgb(var(--color-text-secondary));
+    }
+
+    /* Terminal breadcrumb: shell-prompt styled navigation trail. */
+    .terminal-prompt {
+        font-family: theme('fontFamily.mono');
+        font-size: 0.8125rem;
+        color: rgb(var(--color-text-secondary));
+    }
+    .terminal-prompt .seg-user {
+        color: rgb(var(--color-text-muted));
+    }
+    .terminal-prompt .seg-sep {
+        color: rgb(var(--color-text-muted));
+    }
+    .terminal-prompt .seg-cmd {
+        color: rgb(var(--color-text-primary));
+    }
+    .terminal-cursor {
+        display: inline-block;
+        width: 0.55em;
+        height: 1em;
+        background: rgb(var(--color-text-primary));
+        vertical-align: text-bottom;
+        margin-inline-start: 2px;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+        .terminal-cursor {
+            animation: terminal-blink 1.1s steps(1) infinite;
+        }
+    }
+    @keyframes terminal-blink {
+        50% { opacity: 0; }
+    }
+
+    /* File-tree with literal box-drawing connectors. */
+    .tree-branch {
+        color: rgb(var(--color-text-muted));
+        font-family: theme('fontFamily.mono');
+    }
+    .tree-node-active {
+        background: rgb(var(--color-text-primary));
+        color: rgb(var(--color-canvas));
+        padding: 1px 6px;
+        border-radius: 3px;
+    }
+}
+
 [x-cloak] {
     display: none !important;
 }

@@ -15,7 +15,29 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                display: ['"IBM Plex Sans Condensed"', ...defaultTheme.fontFamily.sans],
+                sans: ['"IBM Plex Sans"', ...defaultTheme.fontFamily.sans],
+                mono: ['"IBM Plex Mono"', ...defaultTheme.fontFamily.mono],
+            },
+            colors: {
+                canvas: 'rgb(var(--color-canvas) / <alpha-value>)',
+                surface: 'rgb(var(--color-surface) / <alpha-value>)',
+                border: {
+                    subtle: 'rgb(var(--color-border-subtle) / <alpha-value>)',
+                    interactive: 'rgb(var(--color-border-interactive) / <alpha-value>)',
+                },
+                ink: {
+                    muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
+                    secondary: 'rgb(var(--color-text-secondary) / <alpha-value>)',
+                    primary: 'rgb(var(--color-text-primary) / <alpha-value>)',
+                },
+                danger: {
+                    DEFAULT: 'rgb(var(--color-danger) / <alpha-value>)',
+                    surface: 'rgb(var(--color-danger) / 0.08)',
+                },
+            },
+            borderRadius: {
+                DEFAULT: '5px',
             },
         },
     },
