@@ -79,6 +79,8 @@ menduplikasi data).
 ## Halaman Student & Progress Tracking
 
 - **`/courses`** — daftar course yang dipublikasikan, dikelompokkan per track. Bisa diakses tanpa login.
+  Ada kotak pencarian (judul/deskripsi course, live search dengan debounce 300ms) dan dropdown filter track;
+  keduanya bisa dikombinasikan dan direset lewat tombol "Reset filter" yang hanya muncul saat ada filter aktif.
 - **`/courses/{course}`** — detail course: deskripsi, progress bar (untuk user login), daftar module & lesson
   dengan status (✓ selesai / 🔒 terkunci / ○ belum), tombol "Mulai/Lanjutkan Belajar" ke lesson berikutnya
   yang belum selesai. Bisa diakses tanpa login (CTA mengarah ke halaman login).
