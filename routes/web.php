@@ -9,6 +9,10 @@ Volt::route('dashboard', 'pages.dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Volt::route('leaderboard', 'pages.leaderboard')
+    ->middleware(['auth', 'verified'])
+    ->name('leaderboard');
+
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');

@@ -34,6 +34,10 @@ $logout = function (Logout $logout) {
                             {{ __('Dashboard') }}
                         </x-nav-link>
 
+                        <x-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')" wire:navigate>
+                            {{ __('Leaderboard') }}
+                        </x-nav-link>
+
                         @can('access-admin-panel')
                             <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')" wire:navigate>
                                 {{ __('Admin Panel') }}
@@ -117,6 +121,10 @@ $logout = function (Logout $logout) {
             @auth
                 <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Dashboard') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')" wire:navigate>
+                    {{ __('Leaderboard') }}
                 </x-responsive-nav-link>
 
                 @can('access-admin-panel')

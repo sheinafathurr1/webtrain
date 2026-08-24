@@ -130,6 +130,15 @@ flag itu diaktifkan. Saat semua check lolos, lesson otomatis ditandai selesai (`
 lewat `firstOrCreate` — retry tidak dobel memberi poin), mengikuti pola yang sama dengan auto-complete quiz.
 Exercise tanpa `checks` tetap pakai tombol "Tandai Selesai" manual seperti sebelumnya.
 
+### Leaderboard
+
+Halaman `/leaderboard` (route `leaderboard`, auth+verified) menampilkan ranking siswa (role `Student`)
+berdasarkan `total_points`, diurutkan `orderByDesc('total_points')` dengan tie-break `orderBy('id')`, dibatasi
+50 siswa teratas. Tiga peringkat teratas tampil sebagai podium (medali + avatar), sisanya sebagai daftar
+ranking biasa. Baris/kartu milik user yang sedang login diberi highlight (ring/background); jika user adalah
+Student tapi berada di luar top 50, kartu "posisi kamu" terpisah ditampilkan di bawah daftar dengan ranking
+dihitung lewat `count()` siswa yang total_points-nya lebih tinggi.
+
 ## Quiz & Assessment
 
 Skema: `quizzes` (1:1 dengan lesson tipe `quiz`) → `questions` (`multiple_choice` atau `short_answer`, dengan
