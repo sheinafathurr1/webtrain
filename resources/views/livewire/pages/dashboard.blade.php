@@ -4,6 +4,7 @@ use App\Models\Badge;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\UserProgress;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 use function Livewire\Volt\{layout, state};
@@ -11,6 +12,15 @@ use function Livewire\Volt\{layout, state};
 layout('layouts.app');
 
 state([
+    'streakAtRisk' => function () {
+        $user = Auth::user();
+
+        if ($user->current_streak <= 0 || ! $user->last_activity_date) {
+            return false;
+        }
+
+        return Carbon::parse($user->last_activity_date)->isSameDay(Carbon::today()->subDay());
+    },
     'badges' => function () {
         $earnedBadgeIds = Auth::user()->userBadges()->pluck('badge_id');
 
@@ -53,6 +63,33 @@ state([
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            @if ($streakAtRisk)
+                @php $ongoing = $courses->first(fn ($item) => $item['percent'] < 100); @endphp
+                <div class="rounded-2xl p-5 bg-gradient-to-r from-accent/15 to-danger/10 border border-accent/30 flex items-center justify-between gap-4 flex-wrap">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">⏰</span>
+                        <div>
+                            <p class="font-display font-bold text-ink-primary">
+                                {{ __('Streak :n hari kamu bakal putus hari ini!', ['n' => auth()->user()->current_streak]) }}
+                            </p>
+                            <p class="text-sm text-ink-secondary">
+                                {{ __('Selesaikan minimal 1 lesson sebelum tengah malam biar streak-nya lanjut.') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    @if ($ongoing && $ongoing['next'])
+                        <a href="{{ route('lessons.show', [$ongoing['course'], $ongoing['next']]) }}" wire:navigate>
+                            <x-primary-button type="button">{{ __('Lanjut Belajar') }}</x-primary-button>
+                        </a>
+                    @else
+                        <a href="{{ route('courses.index') }}" wire:navigate>
+                            <x-primary-button type="button">{{ __('Jelajahi Course') }}</x-primary-button>
+                        </a>
+                    @endif
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="rounded-2xl p-6 bg-gradient-to-br from-gold/15 to-gold/5 border border-gold/20">
                     <div class="w-9 h-9 rounded-full bg-gold/20 flex items-center justify-center text-lg mb-3">⭐</div>

@@ -190,6 +190,21 @@ jadi setiap attempt tercatat.
 - Semuanya tampil di `/dashboard`: total XP, streak saat ini & terpanjang, grid badge (yang belum didapat
   ditampilkan pudar/grayscale, bukan disembunyikan — supaya siswa tahu apa yang bisa dikejar).
 
+### Streak reminder
+
+Dua bagian yang saling melengkapi:
+
+- **Banner in-app** di `/dashboard` — muncul kalau `current_streak > 0` tapi `last_activity_date` masih
+  kemarin (siswa belum menyelesaikan apa pun hari ini), dengan CTA "Lanjut Belajar" ke lesson berikutnya
+  di course yang belum selesai (atau "Jelajahi Course" kalau belum punya course yang sedang diambil).
+- **Email harian** — command `streak:remind` (dijadwalkan tiap hari jam 18:00 lewat `Schedule::command()`
+  di `routes/console.php`) mencari siswa dengan streak aktif yang belum belajar hari ini, lalu mengirim
+  `StreakReminderNotification` (mail). Kolom `users.last_streak_reminder_sent_at` mencegah dobel kirim kalau
+  command dijalankan berkali-kali di hari yang sama. Jalankan manual dengan `php artisan streak:remind`; di
+  lokal (`MAIL_MAILER=log`) isi emailnya bisa dicek di `storage/logs/laravel.log`. Scheduler Laravel perlu
+  cron `* * * * * php artisan schedule:run` (atau `php artisan schedule:work` saat development) supaya jadwal
+  ini benar-benar jalan otomatis di production.
+
 ### Sertifikat PDF
 
 `/courses/{course}/certificate` (route biasa lewat `CertificateController`, bukan Livewire — cocok untuk aksi
