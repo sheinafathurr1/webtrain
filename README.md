@@ -91,6 +91,15 @@ menduplikasi data).
 - **`/dashboard`** — course yang sedang diambil (punya progress) dengan progress bar & tombol "Lanjut
   Belajar", plus riwayat lesson yang sudah diselesaikan.
 
+### Diskusi lesson (komentar)
+
+Tiap halaman lesson punya bagian "Diskusi" di paling bawah (tabel `lesson_comments`, `belongsTo` lesson &
+user). Semua user login bisa menulis komentar (textarea + tombol "Kirim Komentar", validasi `required`).
+Komentar bisa dihapus oleh pemiliknya sendiri atau Admin — lewat `<x-confirm-delete-modal>` yang sama dengan
+CRUD admin (bukan `confirm()` bawaan browser), jadi konsisten dengan pola konfirmasi hapus di seluruh
+aplikasi. Daftar komentar diurutkan terbaru dulu dan otomatis refresh setelah kirim/hapus karena state-nya
+computed property Livewire, bukan query yang di-cache di `mount()`.
+
 Progress disimpan di tabel `user_progress` (`user_id`, `lesson_id`, unik per pasangan). Model `Course` punya
 helper `publishedLessons()`, `progressPercentFor()`, `nextLessonFor()`, dan `isLessonLockedFor()` yang dipakai
 di semua halaman ini agar logikanya konsisten di satu tempat.

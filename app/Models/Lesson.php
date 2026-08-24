@@ -52,6 +52,11 @@ class Lesson extends Model
         return $this->hasMany(UserProgress::class);
     }
 
+    public function comments(): HasMany
+    {
+        return $this->hasMany(LessonComment::class)->latest();
+    }
+
     public function isCompletedBy(?User $user): bool
     {
         if (! $user) {

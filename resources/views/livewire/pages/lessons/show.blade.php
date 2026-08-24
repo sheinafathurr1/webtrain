@@ -2,6 +2,7 @@
 
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\LessonComment;
 use App\Models\Question;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
@@ -22,6 +23,8 @@ state([
     'quizAttempt' => null,
     'retaking' => false,
     'completedLessonIds' => [],
+    'newCommentBody' => '',
+    'confirmingDeleteId' => null,
 ]);
 
 mount(function (Course $course, Lesson $lesson) {
@@ -79,6 +82,32 @@ $previousLesson = computed(fn () => $this->currentIndex > 0 ? $this->orderedLess
 $nextLesson = computed(fn () => $this->orderedLessons->get($this->currentIndex + 1));
 
 $isCompleted = computed(fn () => $this->lesson->isCompletedBy(Auth::user()));
+
+$comments = computed(fn () => $this->lesson->comments()->with('user')->get());
+
+$postComment = function () {
+    $this->validate([
+        'newCommentBody' => ['required', 'string', 'max:2000'],
+    ]);
+
+    LessonComment::create([
+        'lesson_id' => $this->lesson->id,
+        'user_id' => Auth::id(),
+        'body' => trim($this->newCommentBody),
+    ]);
+
+    $this->newCommentBody = '';
+};
+
+$deleteComment = function () {
+    $comment = LessonComment::find($this->confirmingDeleteId);
+
+    if ($comment && ($comment->user_id === Auth::id() || Auth::user()->hasRole('Admin'))) {
+        $comment->delete();
+    }
+
+    $this->confirmingDeleteId = null;
+};
 
 $toggleComplete = function () {
     $progress = UserProgress::where('user_id', Auth::id())->where('lesson_id', $this->lesson->id);
@@ -470,8 +499,64 @@ $retryQuiz = function () {
                             @endif
                         </div>
                     </div>
+
+                    <div class="bg-surface border border-border rounded-2xl p-6">
+                        <h3 class="font-display font-bold text-lg text-ink-primary mb-4">
+                            {{ __('Diskusi') }} <span class="text-ink-muted font-normal text-base">({{ $this->comments->count() }})</span>
+                        </h3>
+
+                        <form wire:submit="postComment" class="mb-6">
+                            <textarea
+                                wire:model="newCommentBody"
+                                rows="3"
+                                placeholder="{{ __('Tulis pertanyaan atau komentar tentang lesson ini...') }}"
+                                class="w-full rounded-xl border-border bg-canvas text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:ring-brand"
+                            ></textarea>
+                            @error('newCommentBody')
+                                <p class="mt-1 text-sm text-danger">{{ $message }}</p>
+                            @enderror
+
+                            <div class="mt-2 flex justify-end">
+                                <x-primary-button type="submit">{{ __('Kirim Komentar') }}</x-primary-button>
+                            </div>
+                        </form>
+
+                        @forelse ($this->comments as $comment)
+                            <div class="flex items-start gap-3 py-3 border-t first:border-t-0 border-border">
+                                <span class="w-8 h-8 rounded-full bg-gradient-to-br from-brand to-accent text-white flex items-center justify-center text-xs font-display font-bold shrink-0">
+                                    {{ Str::of($comment->user->name)->substr(0, 1)->upper() }}
+                                </span>
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-sm text-ink-primary">{{ $comment->user->name }}</span>
+                                        <span class="text-xs text-ink-muted">{{ $comment->created_at->diffForHumans() }}</span>
+                                    </div>
+                                    <p class="text-sm text-ink-secondary mt-0.5 whitespace-pre-wrap break-words">{{ $comment->body }}</p>
+                                </div>
+
+                                @if ($comment->user_id === auth()->id() || auth()->user()->hasRole('Admin'))
+                                    <button
+                                        type="button"
+                                        wire:click="confirmingDeleteId = {{ $comment->id }}"
+                                        class="text-xs font-semibold text-ink-muted hover:text-danger motion-safe:transition-colors duration-150 shrink-0"
+                                    >
+                                        {{ __('Hapus') }}
+                                    </button>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="text-sm text-ink-secondary">{{ __('Belum ada komentar. Jadilah yang pertama bertanya atau berbagi!') }}</p>
+                        @endforelse
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <x-confirm-delete-modal
+        title="{{ __('Hapus komentar?') }}"
+        message="{{ __('Komentar yang dihapus tidak bisa dikembalikan.') }}"
+        action="deleteComment"
+    />
 </div>
