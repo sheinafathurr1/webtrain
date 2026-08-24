@@ -98,6 +98,18 @@ $toggleComplete = function () {
     }
 };
 
+$submitExercise = function () {
+    $progress = UserProgress::firstOrCreate(
+        ['user_id' => Auth::id(), 'lesson_id' => $this->lesson->id],
+        ['completed_at' => now()]
+    );
+
+    if ($progress->wasRecentlyCreated) {
+        app(GamificationService::class)->recordLessonCompleted(Auth::user(), $this->lesson);
+        $this->completedLessonIds[] = $this->lesson->id;
+    }
+};
+
 $submitQuiz = function () {
     $questions = $this->lesson->quiz->questions;
 
@@ -260,7 +272,7 @@ $retryQuiz = function () {
                                     <div
                                         wire:ignore
                                         data-playground
-                                        x-data="codePlayground(@js($lesson->exercise->starter_code), @js($lesson->exercise->solution_code))"
+                                        x-data="codePlayground(@js($lesson->exercise->starter_code), @js($lesson->exercise->solution_code), @js($lesson->exercise->checks ?? []))"
                                         class="rounded-2xl border border-border bg-canvas p-3"
                                     >
                                         <div class="flex items-center justify-between mb-1 px-1">
@@ -277,6 +289,39 @@ $retryQuiz = function () {
                                             <div x-ref="editor" class="border border-border rounded-xl overflow-auto text-sm" style="height: 22rem;"></div>
                                             <iframe x-ref="preview" sandbox="allow-scripts" title="{{ __('Preview') }}" class="w-full border border-border rounded-xl bg-white" style="height: 22rem;"></iframe>
                                         </div>
+
+                                        <template x-if="checks.length">
+                                            <div class="mt-3 px-1">
+                                                <button
+                                                    type="button"
+                                                    @click="runChecks()"
+                                                    :disabled="checking"
+                                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-dark dark:bg-brand text-white text-sm font-display font-semibold disabled:opacity-50 motion-safe:transition-opacity duration-150"
+                                                >
+                                                    <span x-show="!checking">{{ __('✓ Cek Jawaban') }}</span>
+                                                    <span x-show="checking" x-cloak>{{ __('Mengecek...') }}</span>
+                                                </button>
+
+                                                <template x-if="checkResults">
+                                                    <div class="mt-3 space-y-1.5">
+                                                        <template x-for="(result, i) in checkResults" :key="i">
+                                                            <p class="text-sm flex items-center gap-2" :class="result.pass ? 'text-brand' : 'text-danger'">
+                                                                <template x-if="result.pass">
+                                                                    <span>✓ {{ __('Benar') }}</span>
+                                                                </template>
+                                                                <template x-if="!result.pass">
+                                                                    <span>✗ {{ __('Belum sesuai') }}: <span x-text="result.selector"></span></span>
+                                                                </template>
+                                                            </p>
+                                                        </template>
+
+                                                        <template x-if="checkResults.every((r) => r.pass)">
+                                                            <p class="mt-2 text-sm font-semibold text-brand">🎉 {{ __('Semua benar! Lesson ini otomatis ditandai selesai.') }}</p>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
                                     </div>
                                 @endif
 
@@ -386,6 +431,14 @@ $retryQuiz = function () {
                                 </span>
                             @else
                                 <span class="text-sm text-ink-muted">{{ __('Submit quiz di atas untuk menyelesaikan lesson ini.') }}</span>
+                            @endif
+                        @elseif ($lesson->type === Lesson::TYPE_EXERCISE && $lesson->exercise?->hasChecks())
+                            @if ($this->isCompleted)
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-sm font-semibold text-brand">
+                                    <span>✓</span> {{ __('Selesai') }}
+                                </span>
+                            @else
+                                <span class="text-sm text-ink-muted">{{ __('Klik "Cek Jawaban" di atas sampai semua benar untuk menyelesaikan lesson ini.') }}</span>
                             @endif
                         @elseif ($this->isCompleted)
                             <button wire:click="toggleComplete" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/20 motion-safe:transition-colors duration-150">

@@ -111,6 +111,25 @@ opaque sehingga kode yang ditulis siswa tidak bisa mengakses cookie/localStorage
   awal, itu tetap jadi code viewer read-along; sandbox eksekusi PHP server-side adalah fase opsional terpisah,
   di luar 6 fase utama ini.
 
+### Auto-grading
+
+Admin bisa opsional menambahkan **Auto-grading Checks** saat membuat/mengedit lesson tipe `exercise`
+(kolom `checks` JSON di `lesson_exercises`). Ada tiga tipe check:
+
+- **Teks elemen** — elemen hasil `document.querySelector(selector)` harus mengandung teks tertentu.
+- **Gaya CSS** — `getComputedStyle(el)[property]` elemen harus sama dengan nilai yang diharapkan (nilai
+  dinormalisasi lewat elemen probe tersembunyi, jadi admin boleh menulis `blue`, `#f0f0f0`, atau `rgb(...)`).
+- **Alert saat diklik** — mensimulasikan klik pada elemen dan mengecek `alert()` yang terpanggil.
+
+Karena preview iframe sengaja **tanpa** `allow-same-origin` (lihat di atas), parent page tidak bisa membaca
+`iframe.contentDocument` secara langsung. Saat siswa klik **Cek Jawaban**, kode mereka dikirim ulang ke
+iframe dengan sisipan skrip grading kecil di baris terakhir (yang meng-*override* `window.alert`, menjalankan
+semua check, lalu mengirim hasilnya balik ke parent lewat `window.parent.postMessage`) — bukan lewat
+`allow-same-origin`, yang justru akan membuka celah XSS karena `srcdoc` mewarisi origin halaman utama begitu
+flag itu diaktifkan. Saat semua check lolos, lesson otomatis ditandai selesai (`submitExercise()`, idempotent
+lewat `firstOrCreate` — retry tidak dobel memberi poin), mengikuti pola yang sama dengan auto-complete quiz.
+Exercise tanpa `checks` tetap pakai tombol "Tandai Selesai" manual seperti sebelumnya.
+
 ## Quiz & Assessment
 
 Skema: `quizzes` (1:1 dengan lesson tipe `quiz`) → `questions` (`multiple_choice` atau `short_answer`, dengan

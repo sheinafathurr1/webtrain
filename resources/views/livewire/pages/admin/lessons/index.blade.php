@@ -26,6 +26,7 @@ state([
     'exercise_starter_code' => '',
     'exercise_expected_output' => '',
     'exercise_solution_code' => '',
+    'exercise_checks' => [],
     'confirmingDeleteId' => null,
 ]);
 
@@ -45,12 +46,22 @@ $resetForm = function () {
     $this->reset([
         'editingId', 'title', 'slug', 'order', 'is_published', 'content', 'video_url',
         'exercise_language', 'exercise_instructions', 'exercise_starter_code',
-        'exercise_expected_output', 'exercise_solution_code',
+        'exercise_expected_output', 'exercise_solution_code', 'exercise_checks',
     ]);
     $this->type = Lesson::TYPE_TEXT;
     $this->order = 0;
     $this->is_published = false;
     $this->exercise_language = 'html';
+    $this->exercise_checks = [];
+};
+
+$addCheck = function () {
+    $this->exercise_checks[] = ['type' => 'text', 'selector' => '', 'property' => '', 'expected' => ''];
+};
+
+$removeCheck = function (int $index) {
+    unset($this->exercise_checks[$index]);
+    $this->exercise_checks = array_values($this->exercise_checks);
 };
 
 $openCreate = function () {
@@ -75,6 +86,7 @@ $openEdit = function (Lesson $lesson) {
     $this->exercise_starter_code = $lesson->exercise->starter_code ?? '';
     $this->exercise_expected_output = $lesson->exercise->expected_output ?? '';
     $this->exercise_solution_code = $lesson->exercise->solution_code ?? '';
+    $this->exercise_checks = $lesson->exercise->checks ?? [];
 
     $this->showModal = true;
 };
@@ -115,12 +127,25 @@ $save = function () {
         : Lesson::create($lessonData);
 
     if ($validated['type'] === Lesson::TYPE_EXERCISE) {
+        $checks = collect($this->exercise_checks)
+            ->filter(fn ($check) => filled($check['selector'] ?? null) && filled($check['expected'] ?? null))
+            ->filter(fn ($check) => ($check['type'] ?? null) !== 'style' || filled($check['property'] ?? null))
+            ->map(fn ($check) => [
+                'type' => $check['type'],
+                'selector' => $check['selector'],
+                'property' => $check['type'] === 'style' ? $check['property'] : null,
+                'expected' => $check['expected'],
+            ])
+            ->values()
+            ->all();
+
         $lesson->exercise()->updateOrCreate([], [
             'language' => $validated['exercise_language'],
             'instructions' => $validated['exercise_instructions'],
             'starter_code' => $validated['exercise_starter_code'],
             'expected_output' => $validated['exercise_expected_output'],
             'solution_code' => $validated['exercise_solution_code'],
+            'checks' => $checks ?: null,
         ]);
     } else {
         $lesson->exercise()->delete();
@@ -285,6 +310,34 @@ $delete = function () {
                         <div>
                             <x-input-label for="exercise_expected_output" :value="__('Expected Output (deskripsi/HTML hasil akhir)')" />
                             <textarea wire:model="exercise_expected_output" id="exercise_expected_output" rows="3" class="font-mono text-sm border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm block mt-1 w-full"></textarea>
+                        </div>
+
+                        <div class="space-y-2 border-t border-border pt-4">
+                            <x-input-label :value="__('Auto-grading Checks (opsional)')" />
+                            <p class="text-xs text-ink-muted">{{ __('Jika diisi, siswa harus klik "Cek Jawaban" dan lolos semua check ini agar lesson otomatis ditandai selesai.') }}</p>
+
+                            @foreach ($exercise_checks as $index => $check)
+                                <div class="border border-border rounded-xl p-3 space-y-2" wire:key="check-{{ $index }}">
+                                    <div class="flex gap-2">
+                                        <select wire:model.live="exercise_checks.{{ $index }}.type" class="border-2 border-border bg-surface text-ink-primary focus:border-brand focus:ring-0 rounded-xl shadow-sm text-sm flex-1">
+                                            <option value="text">{{ __('Teks elemen berisi...') }}</option>
+                                            <option value="style">{{ __('Gaya CSS elemen adalah...') }}</option>
+                                            <option value="alert">{{ __('Alert saat elemen diklik berisi...') }}</option>
+                                        </select>
+                                        <button type="button" wire:click="removeCheck({{ $index }})" class="text-danger text-sm px-2 hover:opacity-75 transition-opacity duration-150">&times;</button>
+                                    </div>
+
+                                    <x-text-input wire:model="exercise_checks.{{ $index }}.selector" class="block w-full font-mono text-sm" type="text" placeholder="{{ __('CSS selector, mis. h1 atau #tombol') }}" />
+
+                                    @if (($check['type'] ?? 'text') === 'style')
+                                        <x-text-input wire:model="exercise_checks.{{ $index }}.property" class="block w-full font-mono text-sm" type="text" placeholder="{{ __('Properti CSS, mis. color atau backgroundColor') }}" />
+                                    @endif
+
+                                    <x-text-input wire:model="exercise_checks.{{ $index }}.expected" class="block w-full text-sm" type="text" placeholder="{{ __('Nilai yang diharapkan, mis. Halo, Dunia! atau blue') }}" />
+                                </div>
+                            @endforeach
+
+                            <button type="button" wire:click="addCheck" class="text-sm font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('+ Tambah Check') }}</button>
                         </div>
                     </div>
                 @elseif ($type === \App\Models\Lesson::TYPE_QUIZ)

@@ -150,6 +150,10 @@ HTML,
 </html>
 HTML,
             expectedOutput: 'Halaman menampilkan judul besar "Halo, Dunia!" diikuti paragraf "Ini halaman pertama saya." di bawahnya.',
+            checks: [
+                ['type' => 'text', 'selector' => 'h1', 'expected' => 'Halo, Dunia!'],
+                ['type' => 'text', 'selector' => 'p', 'expected' => 'Ini halaman pertama saya.'],
+            ],
         );
 
         $quizLesson = $this->lesson($module, 4, 'Quiz: HTML Dasar', Lesson::TYPE_QUIZ);
@@ -312,6 +316,10 @@ HTML,
 </html>
 HTML,
             expectedOutput: 'Latar belakang halaman berwarna abu-abu muda (#f0f0f0) dan teks "Judul Halaman" berwarna biru.',
+            checks: [
+                ['type' => 'style', 'selector' => 'h1', 'property' => 'color', 'expected' => 'blue'],
+                ['type' => 'style', 'selector' => 'body', 'property' => 'backgroundColor', 'expected' => '#f0f0f0'],
+            ],
         );
     }
 
@@ -416,6 +424,9 @@ HTML,
 </html>
 HTML,
             expectedOutput: 'Saat tombol "Sapa" diklik, muncul kotak alert bertuliskan "Halo, Web Dev!".',
+            checks: [
+                ['type' => 'alert', 'selector' => '#sapa-btn', 'expected' => 'Halo, Web Dev!'],
+            ],
         );
     }
 
@@ -445,6 +456,7 @@ HTML,
         string $solutionCode,
         string $expectedOutput,
         string $language = 'html',
+        ?array $checks = null,
     ): Lesson {
         $lesson = $this->lesson($module, $order, $title, Lesson::TYPE_EXERCISE);
 
@@ -454,6 +466,7 @@ HTML,
             'starter_code' => $starterCode,
             'solution_code' => $solutionCode,
             'expected_output' => $expectedOutput,
+            'checks' => $checks,
         ]);
 
         return $lesson;
