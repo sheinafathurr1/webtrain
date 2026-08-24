@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Bookmark;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonComment;
@@ -82,6 +83,25 @@ $previousLesson = computed(fn () => $this->currentIndex > 0 ? $this->orderedLess
 $nextLesson = computed(fn () => $this->orderedLessons->get($this->currentIndex + 1));
 
 $isCompleted = computed(fn () => $this->lesson->isCompletedBy(Auth::user()));
+
+$isBookmarked = computed(fn () => $this->lesson->isBookmarkedBy(Auth::user()));
+
+$toggleBookmark = function () {
+    $existing = Bookmark::where('user_id', Auth::id())->where('lesson_id', $this->lesson->id)->first();
+
+    if ($existing) {
+        $existing->delete();
+
+        return;
+    }
+
+    // firstOrCreate so a double-click can't throw on the
+    // unique(user_id, lesson_id) constraint.
+    Bookmark::firstOrCreate([
+        'user_id' => Auth::id(),
+        'lesson_id' => $this->lesson->id,
+    ]);
+};
 
 // Capped so a heavily-discussed lesson can't force an unbounded load
 // on every render; the newest 50 covers the active conversation. The
@@ -272,7 +292,22 @@ $retryQuiz = function () {
                 <!-- Main content -->
                 <div class="space-y-6 min-w-0 order-1 lg:order-2">
                     <div class="bg-surface border border-border rounded-2xl p-6">
-                        <x-badge color="brand" class="uppercase mb-2">{{ $lesson->type }}</x-badge>
+                        <div class="flex items-start justify-between gap-3">
+                            <x-badge color="brand" class="uppercase mb-2">{{ $lesson->type }}</x-badge>
+
+                            <button
+                                type="button"
+                                wire:click="toggleBookmark"
+                                class="inline-flex items-center gap-1.5 text-sm font-semibold shrink-0 motion-safe:transition-colors duration-150 {{ $this->isBookmarked ? 'text-gold' : 'text-ink-muted hover:text-gold' }}"
+                                title="{{ $this->isBookmarked ? __('Hapus dari tersimpan') : __('Simpan lesson ini') }}"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="{{ $this->isBookmarked ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 3.5A1.5 1.5 0 016.5 2h7A1.5 1.5 0 0115 3.5v14l-5-3-5 3v-14z" />
+                                </svg>
+                                <span class="hidden sm:inline">{{ $this->isBookmarked ? __('Tersimpan') : __('Simpan') }}</span>
+                            </button>
+                        </div>
+
                         <h1 class="font-display text-2xl sm:text-3xl font-extrabold mb-6 text-ink-primary">{{ $lesson->title }}</h1>
 
                         @if ($lesson->type === Lesson::TYPE_TEXT)

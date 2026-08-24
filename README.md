@@ -122,6 +122,16 @@ Progress disimpan di tabel `user_progress` (`user_id`, `lesson_id`, unik per pas
 helper `publishedLessons()`, `progressPercentFor()`, `nextLessonFor()`, dan `isLessonLockedFor()` yang dipakai
 di semua halaman ini agar logikanya konsisten di satu tempat.
 
+### Bookmark lesson
+
+Tombol ★ di pojok kanan atas tiap halaman lesson menyimpan/menghapus bookmark ke tabel `bookmarks`
+(`user_id`, `lesson_id`, unik per pasangan). Dashboard punya section "Lesson Tersimpan" (maks 20 terbaru)
+berisi link langsung ke tiap lesson yang disimpan beserta judul course-nya, dan tombol "Hapus" per baris.
+Action toggle-nya (`toggleBookmark` di halaman lesson, `removeBookmark` di dashboard) memverifikasi
+kepemilikan (`where('user_id', Auth::id())`) sebelum menghapus, dan memakai `firstOrCreate` (bukan `create()`
+polos) supaya klik ganda/request bersamaan tidak melanggar constraint unique dan menyebabkan exception —
+pola yang sama dipakai `toggleComplete` di lesson (lihat bagian Performance & Scale).
+
 ## Code Playground
 
 Lesson bertipe `exercise` menampilkan editor kode interaktif ([CodeMirror 6](https://codemirror.net/)) di
@@ -429,11 +439,9 @@ Enam fase yang direncanakan semuanya sudah selesai:
 
 ### Follow-up opsional (belum dikerjakan)
 
-Dua item dari daftar "Fitur Pendukung Lain" di spesifikasi awal sengaja belum dibangun supaya fase-fase inti
-di atas bisa selesai dengan kualitas terjaga, bukan tergesa dijejalkan:
+Semua item "Fitur Pendukung Lain" dari spesifikasi awal (search course, bookmark lesson) sudah dibangun sejak
+fase-fase di atas selesai — lihat bagian pencarian course di Halaman Student & Progress Tracking dan bagian
+"Bookmark lesson" tepat di bawah ini. Satu-satunya item yang tetap di luar cakupan:
 
-- **Search course** — kotak pencarian di halaman `/courses` untuk filter berdasarkan judul/deskripsi.
-- **Bookmark lesson** — tabel `bookmarks` (user_id, lesson_id) + tombol simpan di halaman lesson dan daftar
-  "Lesson Tersimpan" di dashboard.
-- Eksekusi PHP/Laravel live di browser (disebut di catatan teknis awal) tetap di luar cakupan — butuh sandbox
-  eksekusi server-side terpisah, bukan sekadar tambahan frontend.
+- Eksekusi PHP/Laravel live di browser (disebut di catatan teknis awal) — butuh sandbox eksekusi server-side
+  terpisah, bukan sekadar tambahan frontend.

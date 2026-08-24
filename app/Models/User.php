@@ -46,4 +46,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(UserBadge::class);
     }
+
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(Bookmark::class);
+    }
 }

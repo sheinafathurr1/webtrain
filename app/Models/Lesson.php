@@ -57,6 +57,20 @@ class Lesson extends Model
         return $this->hasMany(LessonComment::class)->latest();
     }
 
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(Bookmark::class);
+    }
+
+    public function isBookmarkedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->bookmarks()->where('user_id', $user->id)->exists();
+    }
+
     public function isCompletedBy(?User $user): bool
     {
         if (! $user) {

@@ -1,13 +1,14 @@
 <?php
 
 use App\Models\Badge;
+use App\Models\Bookmark;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\UserProgress;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
-use function Livewire\Volt\{layout, state};
+use function Livewire\Volt\{computed, layout, state};
 
 layout('layouts.app');
 
@@ -53,6 +54,16 @@ state([
         ->limit(5)
         ->get(),
 ]);
+
+$bookmarkedLessons = computed(fn () => Auth::user()->bookmarks()
+    ->with('lesson.module.course')
+    ->latest()
+    ->limit(20)
+    ->get());
+
+$removeBookmark = function (int $bookmarkId) {
+    Bookmark::where('id', $bookmarkId)->where('user_id', Auth::id())->delete();
+};
 
 ?>
 
@@ -149,6 +160,27 @@ state([
                         {{ __('Kamu belum mulai course apa pun.') }}
                         <a href="{{ route('courses.index') }}" wire:navigate class="text-brand font-semibold underline hover:no-underline">{{ __('Jelajahi course') }}</a>
                     </p>
+                @endforelse
+            </div>
+
+            <div class="bg-surface border border-border rounded-2xl p-6">
+                <h3 class="font-display font-bold text-lg text-ink-primary mb-4">{{ __('Lesson Tersimpan') }}</h3>
+
+                @forelse ($this->bookmarkedLessons as $bookmark)
+                    <div class="py-2.5 flex items-center justify-between text-sm border-t first:border-t-0 border-border gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="text-gold shrink-0">★</span>
+                            <div class="min-w-0">
+                                <a href="{{ route('lessons.show', [$bookmark->lesson->module->course, $bookmark->lesson]) }}" wire:navigate class="font-medium text-ink-secondary hover:text-brand motion-safe:transition-colors duration-150 truncate block">
+                                    {{ $bookmark->lesson->title }}
+                                </a>
+                                <span class="text-xs text-ink-muted">{{ $bookmark->lesson->module->course->title }}</span>
+                            </div>
+                        </div>
+                        <button type="button" wire:click="removeBookmark({{ $bookmark->id }})" class="text-xs font-semibold text-ink-muted hover:text-danger motion-safe:transition-colors duration-150 shrink-0">{{ __('Hapus') }}</button>
+                    </div>
+                @empty
+                    <p class="text-sm text-ink-secondary">{{ __('Belum ada lesson tersimpan. Klik ikon ★ di halaman lesson untuk menyimpannya.') }}</p>
                 @endforelse
             </div>
 
