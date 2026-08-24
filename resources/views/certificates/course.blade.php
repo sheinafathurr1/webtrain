@@ -13,75 +13,108 @@
             font-family: "DejaVu Sans", sans-serif;
             margin: 0;
             padding: 0;
-            color: #1f2937;
+            color: #1C1914;
+            background: #FFFBF5;
         }
 
         .frame {
-            border: 3px solid #4338ca;
-            padding: 20px;
+            border: 3px solid #0F766E;
             margin: 20px;
         }
 
         .frame-inner {
-            border: 1px solid #a5b4fc;
-            padding: 60px 50px;
+            border: 1px solid #B45309;
+            padding: 50px 50px 40px;
             text-align: center;
         }
 
         .brand {
             font-size: 16px;
             letter-spacing: 4px;
-            color: #4338ca;
+            color: #0F766E;
             text-transform: uppercase;
-            margin-bottom: 40px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .brand-tagline {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #C2410C;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+        }
+
+        .seal {
+            width: 56px;
+            height: 56px;
+            line-height: 52px;
+            border: 2px solid #B45309;
+            border-radius: 50%;
+            color: #B45309;
+            font-size: 26px;
+            text-align: center;
+            margin: 0 auto 20px;
         }
 
         .title {
-            font-size: 32px;
+            font-size: 30px;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-bottom: 30px;
+            margin-bottom: 26px;
+            color: #1C1914;
         }
 
         .given-to {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 10px;
+            font-size: 13px;
+            color: #5C574F;
+            margin-bottom: 8px;
         }
 
         .student-name {
-            font-size: 36px;
+            font-size: 34px;
             font-weight: bold;
-            color: #4338ca;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #d1d5db;
+            color: #0F766E;
+            margin-bottom: 26px;
+            border-bottom: 1px solid #E5E0D6;
             display: inline-block;
             padding-bottom: 10px;
         }
 
         .description {
-            font-size: 14px;
+            font-size: 13px;
             color: #374151;
             line-height: 1.6;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .course-name {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
-            margin: 15px 0 40px;
+            color: #C2410C;
+            margin: 12px 0 36px;
         }
 
         .footer-table {
             width: 100%;
-            margin-top: 50px;
+            margin-top: 30px;
         }
 
         .footer-table td {
-            width: 50%;
-            font-size: 12px;
-            color: #6b7280;
+            width: 33.33%;
+            font-size: 11px;
+            color: #5C574F;
+            vertical-align: top;
+        }
+
+        .footer-table strong {
+            color: #1C1914;
+        }
+
+        .code {
+            font-family: monospace;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -89,6 +122,9 @@
     <div class="frame">
         <div class="frame-inner">
             <div class="brand">WebTrain</div>
+            <div class="brand-tagline">Learning Platform</div>
+
+            <div class="seal">&#10003;</div>
 
             <div class="title">Sertifikat Penyelesaian</div>
 
@@ -113,9 +149,13 @@
                         Diselesaikan pada<br>
                         <strong>{{ $completedAt->format('d') }} {{ $bulanIndonesia[$completedAt->month] }} {{ $completedAt->format('Y') }}</strong>
                     </td>
+                    <td style="text-align: center;">
+                        Kode Sertifikat<br>
+                        <strong class="code">{{ $code }}</strong>
+                    </td>
                     <td style="text-align: right;">
-                        WebTrain Learning Platform<br>
-                        <strong>{{ config('app.url') }}</strong>
+                        Verifikasi keaslian di<br>
+                        <strong>{{ $verifyUrl }}</strong>
                     </td>
                 </tr>
             </table>

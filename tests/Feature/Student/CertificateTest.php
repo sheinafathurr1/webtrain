@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Student;
 
+use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Module;
@@ -57,5 +58,49 @@ class CertificateTest extends TestCase
     {
         $this->get(route('courses.certificate', $this->course))
             ->assertRedirect(route('login'));
+    }
+
+    public function test_completing_the_course_issues_a_persistent_certificate_record(): void
+    {
+        UserProgress::create(['user_id' => $this->student->id, 'lesson_id' => $this->lesson->id]);
+
+        $this->actingAs($this->student)->get(route('courses.certificate', $this->course));
+
+        $this->assertDatabaseHas('certificates', [
+            'user_id' => $this->student->id,
+            'course_id' => $this->course->id,
+        ]);
+    }
+
+    public function test_downloading_the_certificate_twice_keeps_the_same_code(): void
+    {
+        UserProgress::create(['user_id' => $this->student->id, 'lesson_id' => $this->lesson->id]);
+
+        $this->actingAs($this->student)->get(route('courses.certificate', $this->course));
+        $this->actingAs($this->student)->get(route('courses.certificate', $this->course));
+
+        $this->assertSame(1, Certificate::where('user_id', $this->student->id)->where('course_id', $this->course->id)->count());
+    }
+
+    public function test_certificate_code_verifies_publicly_without_auth(): void
+    {
+        UserProgress::create(['user_id' => $this->student->id, 'lesson_id' => $this->lesson->id]);
+
+        $this->actingAs($this->student)->get(route('courses.certificate', $this->course));
+
+        $certificate = Certificate::where('user_id', $this->student->id)->where('course_id', $this->course->id)->firstOrFail();
+
+        $this->get(route('certificates.verify', $certificate->code))
+            ->assertOk()
+            ->assertSee($this->student->name)
+            ->assertSee($this->course->title)
+            ->assertSee('Sertifikat Valid');
+    }
+
+    public function test_unknown_certificate_code_shows_not_found_state(): void
+    {
+        $this->get(route('certificates.verify', 'WT-NOPE-0000'))
+            ->assertOk()
+            ->assertSee('Tidak Ditemukan');
     }
 }

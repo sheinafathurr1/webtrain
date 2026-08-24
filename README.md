@@ -230,7 +230,16 @@ Dua bagian yang saling melengkapi:
 `/courses/{course}/certificate` (route biasa lewat `CertificateController`, bukan Livewire — cocok untuk aksi
 download sekali-jalan) men-generate PDF (via `barryvdh/laravel-dompdf`) berisi nama siswa, judul course, dan
 tanggal lesson terakhir diselesaikan. Diblokir (403) sampai `progressPercentFor()` course tersebut mencapai
-100%. Tombol **"Download Sertifikat"** otomatis muncul di halaman course begitu progress 100%.
+100%. Tombol **"Download Sertifikat"** otomatis muncul di halaman course begitu progress 100%. Desain PDF-nya
+mengikuti palet warna brand aplikasi (teal/oranye/gold), dengan seal berupa lingkaran bertanda centang.
+
+Setiap course yang diselesaikan menerbitkan satu baris permanen di tabel `certificates` (unique per
+`user_id`+`course_id`, dibuat lewat `firstOrCreate` saat pertama kali di-download — download berikutnya
+mengembalikan kode & tanggal terbit yang sama, tidak membuat baris baru). Kode sertifikatnya (format
+`WT-XXXX-XXXX`, `Certificate::generateCode()`) dicetak di PDF beserta URL verifikasi publik
+`/sertifikat/verifikasi/{code}` — halaman ini bisa diakses siapa saja tanpa login, untuk memverifikasi bahwa
+sertifikat itu memang diterbitkan oleh WebTrain (menampilkan nama siswa, judul course, dan tanggal terbit),
+atau menunjukkan "Kode Sertifikat Tidak Ditemukan" untuk kode yang salah/palsu.
 
 ### Dark Mode manual
 
@@ -327,9 +336,9 @@ php artisan test
 app/
   Http/Controllers/  CertificateController (download PDF sertifikat, single-action, bukan Livewire)
   Livewire/          Komponen Livewire class-based (Actions/Logout, dst.)
-  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, UserProgress,
-                     Quiz, Question, QuestionOption, QuizAttempt, QuizAnswer,
-                     PointTransaction, Badge, UserBadge, User)
+  Models/            Eloquent models (Track, Course, Module, Lesson, LessonExercise, LessonComment,
+                     UserProgress, Quiz, Question, QuestionOption, QuizAttempt, QuizAnswer,
+                     PointTransaction, Badge, UserBadge, Certificate, User)
   Models/Concerns/   Trait HasSlug (auto slug generation)
   Providers/          Service providers (Gate access-admin-panel didefinisikan di AppServiceProvider)
   Services/           GamificationService (poin, streak, badge — logic terpusat di satu tempat)

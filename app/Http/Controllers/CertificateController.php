@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\UserProgress;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,10 +24,19 @@ class CertificateController extends Controller
             ->whereIn('lesson_id', $lessonIds)
             ->max('completed_at');
 
+        $completedAt = $completedAt ? \Illuminate\Support\Carbon::parse($completedAt) : now();
+
+        $certificate = Certificate::firstOrCreate(
+            ['user_id' => $user->id, 'course_id' => $course->id],
+            ['code' => Certificate::generateCode(), 'issued_at' => $completedAt]
+        );
+
         $pdf = Pdf::loadView('certificates.course', [
             'user' => $user,
             'course' => $course,
-            'completedAt' => $completedAt ? \Illuminate\Support\Carbon::parse($completedAt) : now(),
+            'completedAt' => $certificate->issued_at,
+            'code' => $certificate->code,
+            'verifyUrl' => route('certificates.verify', $certificate->code),
         ]);
 
         $filename = 'sertifikat-'.Str::slug($course->title).'.pdf';

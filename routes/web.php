@@ -13,6 +13,8 @@ Volt::route('leaderboard', 'pages.leaderboard')
     ->middleware(['auth', 'verified'])
     ->name('leaderboard');
 
+Volt::route('sertifikat/verifikasi/{code}', 'pages.certificates.verify')->name('certificates.verify');
+
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
