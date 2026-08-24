@@ -141,6 +141,16 @@ ranking biasa. Baris/kartu milik user yang sedang login diberi highlight (ring/b
 Student tapi berada di luar top 50, kartu "posisi kamu" terpisah ditampilkan di bawah daftar dengan ranking
 dihitung lewat `count()` siswa yang total_points-nya lebih tinggi.
 
+### Admin Analytics
+
+Halaman `/admin/analytics` (role Admin) menampilkan ringkasan aktivitas platform: total siswa, siswa aktif
+7 hari terakhir (punya `user_progress` baru), total lesson selesai, dan rata-rata skor quiz — semuanya
+dihitung dari `user_progress` sebagai satu sumber kebenaran aktivitas (semua tipe lesson, termasuk exercise
+dan quiz, mencatat penyelesaian ke tabel yang sama). Di bawahnya ada tabel engagement per course (jumlah
+lesson, siswa yang terlibat, completion rate — dihitung dari total penyelesaian dibagi siswa×lesson), tabel
+performa quiz (jumlah percobaan + rata-rata skor per quiz), dan feed 10 aktivitas penyelesaian lesson
+terbaru.
+
 ## Quiz & Assessment
 
 Skema: `quizzes` (1:1 dengan lesson tipe `quiz`) → `questions` (`multiple_choice` atau `short_answer`, dengan

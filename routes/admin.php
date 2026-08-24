@@ -8,6 +8,7 @@ Route::prefix('admin')
     ->middleware(['auth', 'verified', 'role:Admin'])
     ->group(function () {
         Volt::route('/', 'pages.admin.dashboard')->name('dashboard');
+        Volt::route('analytics', 'pages.admin.analytics')->name('analytics');
 
         Volt::route('tracks', 'pages.admin.tracks.index')->name('tracks.index');
         Volt::route('tracks/{track}/courses', 'pages.admin.courses.index')->name('courses.index');
