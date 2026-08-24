@@ -16,6 +16,17 @@ class Course extends Model
 {
     use HasFactory, HasSlug;
 
+    /**
+     * Per-instance memoization for publishedLessons(): the same Course
+     * instance is often asked for this multiple times in one request
+     * (progress %, next lesson, per-lesson lock checks) — without this,
+     * each call re-queries modules+lessons from scratch.
+     */
+    private ?Collection $publishedLessonsCache = null;
+
+    /** @var array<int, Collection> */
+    private array $completedLessonIdsCache = [];
+
     protected function casts(): array
     {
         return [
@@ -50,10 +61,24 @@ class Course extends Model
      */
     public function publishedLessons(): Collection
     {
-        return $this->modules()
-            ->with(['lessons' => fn ($query) => $query->where('is_published', true)])
-            ->get()
-            ->flatMap->lessons;
+        if ($this->publishedLessonsCache !== null) {
+            return $this->publishedLessonsCache;
+        }
+
+        // Reuse an already-eager-loaded modules.lessons relation when
+        // present (course/lesson pages load it up front) instead of
+        // re-querying; re-filter in memory so this stays correct
+        // regardless of what constraint the original load used.
+        $alreadyLoaded = $this->relationLoaded('modules')
+            && $this->modules->every(fn (Module $module) => $module->relationLoaded('lessons'));
+
+        $modules = $alreadyLoaded
+            ? $this->modules
+            : $this->modules()->with('lessons')->get();
+
+        return $this->publishedLessonsCache = $modules->flatMap->lessons
+            ->where('is_published', true)
+            ->values();
     }
 
     public function progressPercentFor(?User $user): int
@@ -64,9 +89,7 @@ class Course extends Model
             return 0;
         }
 
-        $completed = UserProgress::where('user_id', $user->id)
-            ->whereIn('lesson_id', $lessons->pluck('id'))
-            ->count();
+        $completed = $this->completedLessonIdsFor($user)->count();
 
         return (int) round($completed / $lessons->count() * 100);
     }
@@ -87,19 +110,34 @@ class Course extends Model
             return $lessons->first();
         }
 
-        $completedIds = UserProgress::where('user_id', $user->id)
-            ->whereIn('lesson_id', $lessons->pluck('id'))
-            ->pluck('lesson_id');
+        $completedIds = $this->completedLessonIdsFor($user);
 
         return $lessons->first(fn (Lesson $lesson) => ! $completedIds->contains($lesson->id)) ?? $lessons->last();
+    }
+
+    /**
+     * Memoized per user: progressPercentFor() and nextLessonFor() both
+     * need "which of this course's lessons has the user completed",
+     * so share one query instead of each running its own.
+     */
+    private function completedLessonIdsFor(User $user): Collection
+    {
+        return $this->completedLessonIdsCache[$user->id] ??= UserProgress::where('user_id', $user->id)
+            ->whereIn('lesson_id', $this->publishedLessons()->pluck('id'))
+            ->pluck('lesson_id');
     }
 
     /**
      * Whether a lesson is locked for a user under this course's
      * lock_lessons_sequentially setting: locked until the previous
      * lesson in course sequence has been completed.
+     *
+     * Pass $completedLessonIds (already fetched once by the caller,
+     * e.g. in mount()) to check membership in memory instead of
+     * issuing a UserProgress query per lesson — this method is
+     * typically called once per lesson in a listing loop.
      */
-    public function isLessonLockedFor(Lesson $lesson, ?User $user): bool
+    public function isLessonLockedFor(Lesson $lesson, ?User $user, ?array $completedLessonIds = null): bool
     {
         if (! $this->lock_lessons_sequentially) {
             return false;
@@ -113,6 +151,10 @@ class Course extends Model
         }
 
         $previousLesson = $lessons->get($index - 1);
+
+        if ($completedLessonIds !== null) {
+            return ! in_array($previousLesson->id, $completedLessonIds, true);
+        }
 
         return ! $previousLesson->isCompletedBy($user);
     }

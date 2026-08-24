@@ -370,6 +370,52 @@ database/
   seeders/            RoleSeeder, AdminUserSeeder, CourseContentSeeder, BadgeSeeder, DatabaseSeeder
 ```
 
+## Performance & Scale
+
+Audit singkat menutup beberapa N+1 query, celah caching, dan satu race condition nyata:
+
+- **N+1 di sequential-lock check** — `Course::isLessonLockedFor()` dulu memanggil `publishedLessons()` (query
+  module+lesson baru) dan `Lesson::isCompletedBy()` (query `user_progress` baru) di setiap pemanggilan. Karena
+  method ini dipanggil sekali per lesson di halaman detail course dan di sidebar halaman lesson, course dengan
+  10 lesson menghasilkan **35 query** hanya untuk loop pengecekan kunci. Sekarang `publishedLessons()`
+  di-memoize per instance `Course` (dan reuse relasi `modules.lessons` yang sudah di-eager-load bila ada), dan
+  `isLessonLockedFor()` menerima `$completedLessonIds` opsional (data yang sudah di-fetch sekali di `mount()`)
+  supaya cek "sudah selesai?" dilakukan di memori, bukan query baru. Hasilnya: **0 query tambahan** di loop
+  yang sama. `progressPercentFor()`/`nextLessonFor()` juga di-refactor supaya berbagi satu query
+  `completedLessonIdsFor()` alih-alih masing-masing query sendiri.
+- **Index database** — `users.total_points` (dipakai `ORDER BY` di leaderboard), `tracks(is_published, order)`,
+  `courses(track_id, is_published)`, `modules(course_id, order)`, dan `lessons(module_id, is_published, order)`
+  belum punya index meski jadi filter/sort utama di hampir semua listing publik & admin.
+- **Caching** — Leaderboard (`Cache::remember('leaderboard:top50', 60, ...)`) dan Admin Analytics
+  (`Cache::remember('admin:analytics', 300, ...)`, satu cache entry untuk 6 metrik sekaligus) sebelumnya
+  menjalankan query agregat penuh di setiap page load. TTL pendek dipilih karena data ini tidak butuh akurasi
+  real-time detik-per-detik — trade-off standar untuk dashboard/leaderboard skala besar.
+- **`GamificationService::checkBadges()`** — tiap badge dengan `criteria_type` yang sama (mis. dua badge
+  "jumlah lesson selesai" di threshold berbeda) sebelumnya masing-masing menjalankan query yang identik. Sekarang
+  di-memoize per pemanggilan `checkBadges()` — mengurangi query per lesson-completion dari 17 ke 12 di data uji.
+- **Komentar lesson tanpa batas** — `$lesson->comments()` sebelumnya mengambil seluruh thread tanpa limit;
+  lesson yang ramai didiskusikan bisa memuat ribuan baris di setiap render. Sekarang dibatasi 50 komentar
+  terbaru, dengan query `COUNT` terpisah yang murah supaya angka di header "Diskusi (n)" tetap akurat walau
+  sudah melewati batas tampil.
+- **Race condition nyata di `toggleComplete`** — method ini memakai pola *check-then-`create()`* tanpa
+  proteksi, berbeda dari `submitExercise`/`submitQuiz` yang sudah pakai `firstOrCreate` + `wasRecentlyCreated`.
+  Klik ganda/dua request bersamaan bisa membuat kedua request lolos pengecekan `exists()` sebelum salah satu
+  ter-commit, lalu request kedua **throw exception tak tertangani** karena melanggar constraint unique
+  `(user_id, lesson_id)` di tabel `user_progress` — bukan cuma double-award poin, tapi crash. Diperbaiki supaya
+  konsisten pakai `firstOrCreate` seperti dua path lainnya.
+- **`StreakReminderNotification` tidak benar-benar di-queue** — class ini pakai trait `Queueable` tapi lupa
+  `implements ShouldQueue`, jadi command `streak:remind` sebenarnya mengirim email secara sinkron di dalam
+  loop (trait saja tidak cukup, harus implement interface-nya). Sudah diperbaiki; `QUEUE_CONNECTION=database`
+  sudah tersedia jadi tinggal jalankan `php artisan queue:work` di production.
+- **Rate limiting di endpoint publik** — `/sertifikat/verifikasi/{code}` (tanpa auth, by design) ditambah
+  `throttle:30,1` supaya tidak jadi target scraping/enumerasi kode sertifikat.
+- **Dicoba tapi di-revert**: mengganti loop `update()` per-baris di action `reorder()` (admin drag-and-drop)
+  dengan satu panggilan `upsert()` batch. Bekerja di MySQL, tapi SQLite (dipakai test suite) memvalidasi
+  constraint `NOT NULL` di klausa `INSERT` milik `ON CONFLICT` walau baris itu pasti akan lewat jalur `UPDATE`
+  — jadi test gagal. Karena daftar yang di-reorder sudah dibatasi ≤10 item (lihat bagian drag-and-drop di
+  atas), potensi penghematannya kecil dan tidak sepadan dengan risiko portabilitas across MySQL/SQLite, jadi
+  dikembalikan ke loop biasa.
+
 ## Roadmap
 
 Enam fase yang direncanakan semuanya sudah selesai:

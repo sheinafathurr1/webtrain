@@ -83,7 +83,13 @@ $nextLesson = computed(fn () => $this->orderedLessons->get($this->currentIndex +
 
 $isCompleted = computed(fn () => $this->lesson->isCompletedBy(Auth::user()));
 
-$comments = computed(fn () => $this->lesson->comments()->with('user')->get());
+// Capped so a heavily-discussed lesson can't force an unbounded load
+// on every render; the newest 50 covers the active conversation. The
+// header count is a separate cheap query so it stays accurate even
+// past the cap.
+$comments = computed(fn () => $this->lesson->comments()->with('user')->limit(50)->get());
+
+$commentsCount = computed(fn () => $this->lesson->comments()->count());
 
 $postComment = function () {
     $this->validate([
@@ -110,18 +116,24 @@ $deleteComment = function () {
 };
 
 $toggleComplete = function () {
-    $progress = UserProgress::where('user_id', Auth::id())->where('lesson_id', $this->lesson->id);
+    $existing = UserProgress::where('user_id', Auth::id())->where('lesson_id', $this->lesson->id)->first();
 
-    if ($progress->exists()) {
-        $progress->delete();
+    if ($existing) {
+        $existing->delete();
         $this->completedLessonIds = array_values(array_diff($this->completedLessonIds, [$this->lesson->id]));
-    } else {
-        UserProgress::create([
-            'user_id' => Auth::id(),
-            'lesson_id' => $this->lesson->id,
-            'completed_at' => now(),
-        ]);
 
+        return;
+    }
+
+    // firstOrCreate (not a plain create()) so a double-click doesn't
+    // throw on the user_progress unique(user_id, lesson_id) constraint
+    // — same pattern used by submitExercise/submitQuiz below.
+    $progress = UserProgress::firstOrCreate(
+        ['user_id' => Auth::id(), 'lesson_id' => $this->lesson->id],
+        ['completed_at' => now()]
+    );
+
+    if ($progress->wasRecentlyCreated) {
         app(GamificationService::class)->recordLessonCompleted(Auth::user(), $this->lesson);
         $this->completedLessonIds[] = $this->lesson->id;
     }
@@ -239,7 +251,7 @@ $retryQuiz = function () {
                                     <li>
                                         @if ($navLesson->id === $lesson->id)
                                             <span class="flex items-center gap-2 truncate text-sm px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-brand to-accent text-white font-semibold">{{ $navLesson->title }}</span>
-                                        @elseif (in_array($navLesson->id, $completedLessonIds) || ! $course->isLessonLockedFor($navLesson, auth()->user()))
+                                        @elseif (in_array($navLesson->id, $completedLessonIds) || ! $course->isLessonLockedFor($navLesson, auth()->user(), $completedLessonIds))
                                             <a href="{{ route('lessons.show', [$course, $navLesson]) }}" wire:navigate class="flex items-center gap-2 truncate text-sm px-2.5 py-1.5 rounded-xl text-ink-secondary hover:text-brand hover:bg-brand/5 motion-safe:transition-colors duration-150">
                                                 <span class="w-4 h-4 rounded-full {{ in_array($navLesson->id, $completedLessonIds) ? 'bg-brand/20 text-brand' : 'border border-border' }} flex items-center justify-center text-[9px] shrink-0">{{ in_array($navLesson->id, $completedLessonIds) ? '✓' : '' }}</span>
                                                 <span class="truncate">{{ $navLesson->title }}</span>
@@ -485,7 +497,7 @@ $retryQuiz = function () {
                             @endif
 
                             @if ($this->nextLesson)
-                                @if ($course->isLessonLockedFor($this->nextLesson, auth()->user()))
+                                @if ($course->isLessonLockedFor($this->nextLesson, auth()->user(), $completedLessonIds))
                                     <x-secondary-button type="button" disabled>{{ __('Selanjutnya →') }}</x-secondary-button>
                                 @else
                                     <a href="{{ route('lessons.show', [$course, $this->nextLesson]) }}" wire:navigate>
@@ -502,7 +514,7 @@ $retryQuiz = function () {
 
                     <div class="bg-surface border border-border rounded-2xl p-6">
                         <h3 class="font-display font-bold text-lg text-ink-primary mb-4">
-                            {{ __('Diskusi') }} <span class="text-ink-muted font-normal text-base">({{ $this->comments->count() }})</span>
+                            {{ __('Diskusi') }} <span class="text-ink-muted font-normal text-base">({{ $this->commentsCount }})</span>
                         </h3>
 
                         <form wire:submit="postComment" class="mb-6">

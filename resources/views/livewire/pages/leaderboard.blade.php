@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 use function Livewire\Volt\{layout, state};
@@ -9,11 +10,14 @@ use function Livewire\Volt\{layout, state};
 layout('layouts.app');
 
 state([
-    'leaderboard' => fn () => User::role('Student')
+    // Same top-50 for every viewer, so one shared cache entry serves
+    // everyone — short TTL keeps it close to real-time without hitting
+    // the DB on every single page view.
+    'leaderboard' => fn () => Cache::remember('leaderboard:top50', 60, fn () => User::role('Student')
         ->orderByDesc('total_points')
         ->orderBy('id')
         ->limit(50)
-        ->get(),
+        ->get()),
 ]);
 
 ?>

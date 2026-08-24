@@ -71,9 +71,29 @@ class GamificationService
     private function checkBadges(User $user): void
     {
         $earnedBadgeIds = $user->userBadges()->pluck('badge_id');
+        $badges = Badge::whereNotIn('id', $earnedBadgeIds)->get();
 
-        foreach (Badge::whereNotIn('id', $earnedBadgeIds)->get() as $badge) {
-            if ($this->meetsCriteria($user, $badge)) {
+        if ($badges->isEmpty()) {
+            return;
+        }
+
+        // Several badges can share the same criteria_type (e.g. two
+        // "lessons completed" thresholds) — memoize each check per
+        // call so they don't each re-run the same query.
+        $lessonsCompletedCount = null;
+        $hasPerfectQuizScore = null;
+        $hasCompletedCourse = null;
+
+        foreach ($badges as $badge) {
+            $meetsCriteria = match ($badge->criteria_type) {
+                Badge::CRITERIA_LESSONS_COMPLETED => ($lessonsCompletedCount ??= $user->progress()->count()) >= $badge->criteria_value,
+                Badge::CRITERIA_STREAK_DAYS => $user->longest_streak >= $badge->criteria_value,
+                Badge::CRITERIA_QUIZ_PERFECT_SCORE => $hasPerfectQuizScore ??= QuizAttempt::where('user_id', $user->id)->where('score', 100)->exists(),
+                Badge::CRITERIA_COURSE_COMPLETED => $hasCompletedCourse ??= $this->hasCompletedAnyCourse($user),
+                default => false,
+            };
+
+            if ($meetsCriteria) {
                 UserBadge::create([
                     'user_id' => $user->id,
                     'badge_id' => $badge->id,
@@ -81,17 +101,6 @@ class GamificationService
                 ]);
             }
         }
-    }
-
-    private function meetsCriteria(User $user, Badge $badge): bool
-    {
-        return match ($badge->criteria_type) {
-            Badge::CRITERIA_LESSONS_COMPLETED => $user->progress()->count() >= $badge->criteria_value,
-            Badge::CRITERIA_STREAK_DAYS => $user->longest_streak >= $badge->criteria_value,
-            Badge::CRITERIA_QUIZ_PERFECT_SCORE => QuizAttempt::where('user_id', $user->id)->where('score', 100)->exists(),
-            Badge::CRITERIA_COURSE_COMPLETED => $this->hasCompletedAnyCourse($user),
-            default => false,
-        };
     }
 
     private function hasCompletedAnyCourse(User $user): bool

@@ -3,75 +3,86 @@
 use App\Models\QuizAttempt;
 use App\Models\User;
 use App\Models\UserProgress;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 use function Livewire\Volt\{layout, state};
 
 layout('layouts.app');
 
+// One shared cache entry for the whole dashboard: these are aggregate
+// queries over the entire dataset, not per-viewer, so every admin who
+// opens this page within the TTL reuses the same snapshot instead of
+// re-running six queries (several of them multi-table joins) each time.
 state([
-    'totalStudents' => fn () => User::role('Student')->count(),
+    'analytics' => fn () => Cache::remember('admin:analytics', 300, fn () => [
+        'totalStudents' => User::role('Student')->count(),
 
-    'activeStudents' => fn () => UserProgress::where('created_at', '>=', now()->subDays(7))
-        ->distinct('user_id')
-        ->count('user_id'),
+        'activeStudents' => UserProgress::where('created_at', '>=', now()->subDays(7))
+            ->distinct('user_id')
+            ->count('user_id'),
 
-    'totalCompletions' => fn () => UserProgress::count(),
+        'totalCompletions' => UserProgress::count(),
 
-    'averageQuizScore' => fn () => (int) round(QuizAttempt::avg('score') ?? 0),
+        'averageQuizScore' => (int) round(QuizAttempt::avg('score') ?? 0),
 
-    'courseStats' => fn () => DB::table('courses')
-        ->join('tracks', 'tracks.id', '=', 'courses.track_id')
-        ->leftJoin('modules', 'modules.course_id', '=', 'courses.id')
-        ->leftJoin('lessons', function ($join) {
-            $join->on('lessons.module_id', '=', 'modules.id')->where('lessons.is_published', true);
-        })
-        ->leftJoin('user_progress', 'user_progress.lesson_id', '=', 'lessons.id')
-        ->where('courses.is_published', true)
-        ->select(
-            'courses.id',
-            'courses.title as course_title',
-            'tracks.title as track_title',
-            DB::raw('COUNT(DISTINCT lessons.id) as lessons_count'),
-            DB::raw('COUNT(DISTINCT user_progress.user_id) as students_count'),
-            DB::raw('COUNT(user_progress.id) as completions_count')
-        )
-        ->groupBy('courses.id', 'courses.title', 'tracks.title')
-        ->orderByDesc('students_count')
-        ->get()
-        ->map(function ($row) {
-            $row->completion_rate = ($row->students_count > 0 && $row->lessons_count > 0)
-                ? (int) round($row->completions_count / ($row->students_count * $row->lessons_count) * 100)
-                : 0;
+        'courseStats' => DB::table('courses')
+            ->join('tracks', 'tracks.id', '=', 'courses.track_id')
+            ->leftJoin('modules', 'modules.course_id', '=', 'courses.id')
+            ->leftJoin('lessons', function ($join) {
+                $join->on('lessons.module_id', '=', 'modules.id')->where('lessons.is_published', true);
+            })
+            ->leftJoin('user_progress', 'user_progress.lesson_id', '=', 'lessons.id')
+            ->where('courses.is_published', true)
+            ->select(
+                'courses.id',
+                'courses.title as course_title',
+                'tracks.title as track_title',
+                DB::raw('COUNT(DISTINCT lessons.id) as lessons_count'),
+                DB::raw('COUNT(DISTINCT user_progress.user_id) as students_count'),
+                DB::raw('COUNT(user_progress.id) as completions_count')
+            )
+            ->groupBy('courses.id', 'courses.title', 'tracks.title')
+            ->orderByDesc('students_count')
+            ->get()
+            ->map(function ($row) {
+                $row->completion_rate = ($row->students_count > 0 && $row->lessons_count > 0)
+                    ? (int) round($row->completions_count / ($row->students_count * $row->lessons_count) * 100)
+                    : 0;
 
-            return $row;
-        }),
+                return $row;
+            }),
 
-    'quizStats' => fn () => DB::table('quizzes')
-        ->join('lessons', 'lessons.id', '=', 'quizzes.lesson_id')
-        ->join('modules', 'modules.id', '=', 'lessons.module_id')
-        ->join('courses', 'courses.id', '=', 'modules.course_id')
-        ->leftJoin('quiz_attempts', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
-        ->select(
-            'quizzes.id',
-            'quizzes.title as quiz_title',
-            'courses.title as course_title',
-            DB::raw('COUNT(quiz_attempts.id) as attempts_count'),
-            DB::raw('AVG(quiz_attempts.score) as average_score')
-        )
-        ->groupBy('quizzes.id', 'quizzes.title', 'courses.title')
-        ->orderByDesc('attempts_count')
-        ->get(),
+        'quizStats' => DB::table('quizzes')
+            ->join('lessons', 'lessons.id', '=', 'quizzes.lesson_id')
+            ->join('modules', 'modules.id', '=', 'lessons.module_id')
+            ->join('courses', 'courses.id', '=', 'modules.course_id')
+            ->leftJoin('quiz_attempts', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
+            ->select(
+                'quizzes.id',
+                'quizzes.title as quiz_title',
+                'courses.title as course_title',
+                DB::raw('COUNT(quiz_attempts.id) as attempts_count'),
+                DB::raw('AVG(quiz_attempts.score) as average_score')
+            )
+            ->groupBy('quizzes.id', 'quizzes.title', 'courses.title')
+            ->orderByDesc('attempts_count')
+            ->get(),
 
-    'recentActivity' => fn () => UserProgress::with(['user:id,name', 'lesson:id,title,module_id', 'lesson.module:id,course_id', 'lesson.module.course:id,title'])
-        ->latest('user_progress.created_at')
-        ->limit(10)
-        ->get(),
+        'recentActivity' => UserProgress::with(['user:id,name', 'lesson:id,title,module_id', 'lesson.module:id,course_id', 'lesson.module.course:id,title'])
+            ->latest('user_progress.created_at')
+            ->limit(10)
+            ->get(),
+    ]),
 ]);
 
 ?>
 
 <div>
+    @php
+        ['totalStudents' => $totalStudents, 'activeStudents' => $activeStudents, 'totalCompletions' => $totalCompletions, 'averageQuizScore' => $averageQuizScore, 'courseStats' => $courseStats, 'quizStats' => $quizStats, 'recentActivity' => $recentActivity] = $analytics;
+    @endphp
+
     <x-slot:header>
         <h2 class="font-display font-extrabold text-2xl text-ink-primary">{{ __('Analytics') }}</h2>
     </x-slot:header>

@@ -75,7 +75,7 @@ mount(function (Course $course) {
                     </div>
                     <ul class="divide-y divide-border">
                         @foreach ($module->lessons as $lesson)
-                            @php $locked = $course->isLessonLockedFor($lesson, auth()->user()); @endphp
+                            @php $locked = $course->isLessonLockedFor($lesson, auth()->user(), $completedLessonIds); @endphp
                             <li class="px-6 py-3.5 flex items-center justify-between text-sm">
                                 <div class="flex items-center gap-3">
                                     @if (in_array($lesson->id, $completedLessonIds))
