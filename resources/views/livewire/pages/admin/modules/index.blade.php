@@ -18,6 +18,7 @@ state([
     'description' => '',
     'order' => 0,
     'confirmingDeleteId' => null,
+    'search' => '',
 ]);
 
 mount(function (Course $course) {
@@ -27,10 +28,23 @@ mount(function (Course $course) {
 with(fn () => [
     'modules' => Module::withCount('lessons')
         ->where('course_id', $this->course->id)
+        ->when(trim($this->search) !== '', fn ($q) => $q->where(fn ($q) => $q
+            ->where('title', 'like', '%'.trim($this->search).'%')
+            ->orWhere('slug', 'like', '%'.trim($this->search).'%')
+        ))
         ->orderBy('order')
         ->orderBy('title')
         ->paginate(10),
 ]);
+
+$updatedSearch = function () {
+    $this->resetPage();
+};
+
+$resetFilters = function () {
+    $this->search = '';
+    $this->resetPage();
+};
 
 $resetForm = function () {
     $this->reset(['editingId', 'title', 'slug', 'description', 'order']);
@@ -111,11 +125,25 @@ $reorder = function (int $draggedId, int $targetId) {
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="flex justify-end">
+            <div class="flex justify-between items-center gap-3 flex-wrap">
+                <div class="flex gap-3 flex-wrap flex-1">
+                    <input
+                        type="search"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('Cari judul atau slug...') }}"
+                        class="w-64 max-w-full rounded-xl border-border bg-surface text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:ring-brand"
+                    />
+                    @if ($search !== '')
+                        <button type="button" wire:click="resetFilters" class="text-sm font-semibold text-ink-secondary hover:text-brand motion-safe:transition-colors duration-150">{{ __('Reset filter') }}</button>
+                    @endif
+                </div>
+
                 <x-primary-button wire:click="openCreate">{{ __('+ Module Baru') }}</x-primary-button>
             </div>
 
-            @if (! $modules->hasPages() && $modules->isNotEmpty())
+            @php $hasActiveFilters = $search !== ''; @endphp
+
+            @if (! $modules->hasPages() && ! $hasActiveFilters && $modules->isNotEmpty())
                 <p class="text-xs text-ink-muted -mb-2">{{ __('Seret ikon di kiri untuk mengubah urutan module.') }}</p>
             @endif
 
@@ -138,12 +166,12 @@ $reorder = function (int $draggedId, int $targetId) {
                                     @drop="dragId !== null && $wire.reorder(dragId, {{ $module->id }}); dragId = null"
                                 >
                                     <td class="px-4 py-4 text-ink-muted">
-                                        @if (! $modules->hasPages())
+                                        @if (! $modules->hasPages() && ! $hasActiveFilters)
                                             <span draggable="true" @dragstart="dragId = {{ $module->id }}" class="cursor-grab active:cursor-grabbing inline-flex" title="{{ __('Seret untuk mengurutkan') }}">
                                                 <x-drag-handle-icon />
                                             </span>
                                         @else
-                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman') }}">
+                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman tanpa filter aktif') }}">
                                                 <x-drag-handle-icon />
                                             </span>
                                         @endif
@@ -164,7 +192,11 @@ $reorder = function (int $draggedId, int $targetId) {
                             @empty
                                 <tr>
                                     <td colspan="4" class="px-6 py-8 text-center text-sm text-ink-secondary">
-                                        {{ __('Belum ada module di course ini.') }}
+                                        @if ($hasActiveFilters)
+                                            {{ __('Tidak ada module yang cocok dengan pencarian.') }}
+                                        @else
+                                            {{ __('Belum ada module di course ini.') }}
+                                        @endif
                                     </td>
                                 </tr>
                             @endforelse

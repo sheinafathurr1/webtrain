@@ -75,9 +75,16 @@ parent-nya masing-masing — semua track untuk halaman Track, course dalam 1 tra
 menyisipkan id yang di-drag tepat sebelum id target, lalu menulis ulang kolom `order` 0..n secara berurutan;
 `reorder` juga memverifikasi kedua id benar-benar berada dalam scope yang sama sebelum memprosesnya, supaya
 drag-drop tidak bisa dipakai untuk mengubah `order` baris di luar parent yang sedang dibuka. Drag-and-drop
-hanya aktif selama daftar muat dalam 1 halaman (`! $items->hasPages()`) — kalau sudah lebih dari 10 item dan
-terpaginasi, ikon grip jadi non-aktif (redup) dan urutan tetap bisa diatur manual lewat field "Urutan" di
-modal edit seperti sebelumnya.
+hanya aktif selama daftar muat dalam 1 halaman tanpa filter aktif (`! $items->hasPages() && ! $hasActiveFilters`)
+— kalau sudah lebih dari 10 item, terpaginasi, atau sedang difilter, ikon grip jadi non-aktif (redup) dan
+urutan tetap bisa diatur manual lewat field "Urutan" di modal edit seperti sebelumnya.
+
+Setiap tabel juga punya **search & filter**: kotak pencarian (judul/slug, `wire:model.live.debounce.300ms`)
+dan dropdown status (published/draft) di semua level, plus dropdown tipe lesson (text/video/exercise/quiz) khusus
+di halaman Lesson. Query di-scope ke parent yang sama dengan yang dipakai `reorder` (mis. course di halaman
+Module hanya mencari dalam course itu). Mengubah search/filter otomatis memanggil `resetPage()` lewat hook
+`updated<Nama Properti>` Livewire supaya tidak nyangkut di halaman pagination yang sudah kosong, dan tombol
+"Reset filter" hanya muncul saat ada filter aktif.
 
 ### Course contoh yang otomatis ter-seed
 

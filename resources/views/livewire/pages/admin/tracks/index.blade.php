@@ -17,11 +17,35 @@ state([
     'order' => 0,
     'is_published' => false,
     'confirmingDeleteId' => null,
+    'search' => '',
+    'status' => '',
 ]);
 
 with(fn () => [
-    'tracks' => Track::withCount('courses')->orderBy('order')->orderBy('title')->paginate(10),
+    'tracks' => Track::withCount('courses')
+        ->when(trim($this->search) !== '', fn ($q) => $q->where(fn ($q) => $q
+            ->where('title', 'like', '%'.trim($this->search).'%')
+            ->orWhere('slug', 'like', '%'.trim($this->search).'%')
+        ))
+        ->when($this->status !== '', fn ($q) => $q->where('is_published', $this->status === 'published'))
+        ->orderBy('order')
+        ->orderBy('title')
+        ->paginate(10),
 ]);
+
+$updatedSearch = function () {
+    $this->resetPage();
+};
+
+$updatedStatus = function () {
+    $this->resetPage();
+};
+
+$resetFilters = function () {
+    $this->search = '';
+    $this->status = '';
+    $this->resetPage();
+};
 
 $resetForm = function () {
     $this->reset(['editingId', 'title', 'slug', 'description', 'order', 'is_published']);
@@ -99,11 +123,30 @@ $reorder = function (int $draggedId, int $targetId) {
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="flex justify-end">
+            <div class="flex justify-between items-center gap-3 flex-wrap">
+                <div class="flex gap-3 flex-wrap flex-1">
+                    <input
+                        type="search"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('Cari judul atau slug...') }}"
+                        class="w-64 max-w-full rounded-xl border-border bg-surface text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:ring-brand"
+                    />
+                    <select wire:model.live="status" class="rounded-xl border-border bg-surface text-sm text-ink-primary focus:border-brand focus:ring-brand">
+                        <option value="">{{ __('Semua Status') }}</option>
+                        <option value="published">{{ __('Published') }}</option>
+                        <option value="draft">{{ __('Draft') }}</option>
+                    </select>
+                    @if ($search !== '' || $status !== '')
+                        <button type="button" wire:click="resetFilters" class="text-sm font-semibold text-ink-secondary hover:text-brand motion-safe:transition-colors duration-150">{{ __('Reset filter') }}</button>
+                    @endif
+                </div>
+
                 <x-primary-button wire:click="openCreate">{{ __('+ Track Baru') }}</x-primary-button>
             </div>
 
-            @if (! $tracks->hasPages() && $tracks->isNotEmpty())
+            @php $hasActiveFilters = $search !== '' || $status !== ''; @endphp
+
+            @if (! $tracks->hasPages() && ! $hasActiveFilters && $tracks->isNotEmpty())
                 <p class="text-xs text-ink-muted -mb-2">{{ __('Seret ikon di kiri untuk mengubah urutan track.') }}</p>
             @endif
 
@@ -127,12 +170,12 @@ $reorder = function (int $draggedId, int $targetId) {
                                     @drop="dragId !== null && $wire.reorder(dragId, {{ $track->id }}); dragId = null"
                                 >
                                     <td class="px-4 py-4 text-ink-muted">
-                                        @if (! $tracks->hasPages())
+                                        @if (! $tracks->hasPages() && ! $hasActiveFilters)
                                             <span draggable="true" @dragstart="dragId = {{ $track->id }}" class="cursor-grab active:cursor-grabbing inline-flex" title="{{ __('Seret untuk mengurutkan') }}">
                                                 <x-drag-handle-icon />
                                             </span>
                                         @else
-                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman') }}">
+                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman tanpa filter aktif') }}">
                                                 <x-drag-handle-icon />
                                             </span>
                                         @endif
@@ -156,7 +199,11 @@ $reorder = function (int $draggedId, int $targetId) {
                             @empty
                                 <tr>
                                     <td colspan="5" class="px-6 py-8 text-center text-sm text-ink-secondary">
-                                        {{ __('Belum ada track. Buat track pertama untuk mulai menyusun jalur belajar.') }}
+                                        @if ($hasActiveFilters)
+                                            {{ __('Tidak ada track yang cocok dengan pencarian/filter.') }}
+                                        @else
+                                            {{ __('Belum ada track. Buat track pertama untuk mulai menyusun jalur belajar.') }}
+                                        @endif
                                     </td>
                                 </tr>
                             @endforelse
