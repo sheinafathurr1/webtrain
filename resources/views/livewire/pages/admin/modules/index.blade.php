@@ -83,6 +83,21 @@ $delete = function () {
     $this->confirmingDeleteId = null;
 };
 
+$reorder = function (int $draggedId, int $targetId) {
+    $ids = Module::where('course_id', $this->course->id)->orderBy('order')->orderBy('title')->pluck('id')->all();
+
+    if ($draggedId === $targetId || ! in_array($draggedId, $ids, true) || ! in_array($targetId, $ids, true)) {
+        return;
+    }
+
+    $ids = array_values(array_diff($ids, [$draggedId]));
+    array_splice($ids, array_search($targetId, $ids, true), 0, [$draggedId]);
+
+    foreach ($ids as $index => $id) {
+        Module::where('id', $id)->update(['order' => $index]);
+    }
+};
+
 ?>
 
 <div>
@@ -100,19 +115,39 @@ $delete = function () {
                 <x-primary-button wire:click="openCreate">{{ __('+ Module Baru') }}</x-primary-button>
             </div>
 
+            @if (! $modules->hasPages() && $modules->isNotEmpty())
+                <p class="text-xs text-ink-muted -mb-2">{{ __('Seret ikon di kiri untuk mengubah urutan module.') }}</p>
+            @endif
+
             <div class="bg-surface border border-border rounded-2xl overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-border">
                         <thead class="bg-canvas">
                             <tr>
+                                <th class="w-8 px-4 py-3"></th>
                                 <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
                                 <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Lesson') }}</th>
                                 <th class="px-6 py-3"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-border">
+                        <tbody class="divide-y divide-border" x-data="{ dragId: null }">
                             @forelse ($modules as $module)
-                                <tr wire:key="module-{{ $module->id }}">
+                                <tr
+                                    wire:key="module-{{ $module->id }}"
+                                    @dragover.prevent
+                                    @drop="dragId !== null && $wire.reorder(dragId, {{ $module->id }}); dragId = null"
+                                >
+                                    <td class="px-4 py-4 text-ink-muted">
+                                        @if (! $modules->hasPages())
+                                            <span draggable="true" @dragstart="dragId = {{ $module->id }}" class="cursor-grab active:cursor-grabbing inline-flex" title="{{ __('Seret untuk mengurutkan') }}">
+                                                <x-drag-handle-icon />
+                                            </span>
+                                        @else
+                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman') }}">
+                                                <x-drag-handle-icon />
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-4 text-sm text-ink-primary font-medium">
                                         {{ $module->title }}
                                         <div class="font-mono text-xs text-ink-muted">{{ $module->slug }}</div>
@@ -128,7 +163,7 @@ $delete = function () {
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="px-6 py-8 text-center text-sm text-ink-secondary">
+                                    <td colspan="4" class="px-6 py-8 text-center text-sm text-ink-secondary">
                                         {{ __('Belum ada module di course ini.') }}
                                     </td>
                                 </tr>

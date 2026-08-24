@@ -163,6 +163,21 @@ $delete = function () {
     $this->confirmingDeleteId = null;
 };
 
+$reorder = function (int $draggedId, int $targetId) {
+    $ids = Lesson::where('module_id', $this->module->id)->orderBy('order')->orderBy('title')->pluck('id')->all();
+
+    if ($draggedId === $targetId || ! in_array($draggedId, $ids, true) || ! in_array($targetId, $ids, true)) {
+        return;
+    }
+
+    $ids = array_values(array_diff($ids, [$draggedId]));
+    array_splice($ids, array_search($targetId, $ids, true), 0, [$draggedId]);
+
+    foreach ($ids as $index => $id) {
+        Lesson::where('id', $id)->update(['order' => $index]);
+    }
+};
+
 ?>
 
 <div>
@@ -180,20 +195,40 @@ $delete = function () {
                 <x-primary-button wire:click="openCreate">{{ __('+ Lesson Baru') }}</x-primary-button>
             </div>
 
+            @if (! $lessons->hasPages() && $lessons->isNotEmpty())
+                <p class="text-xs text-ink-muted -mb-2">{{ __('Seret ikon di kiri untuk mengubah urutan lesson.') }}</p>
+            @endif
+
             <div class="bg-surface border border-border rounded-2xl overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-border">
                         <thead class="bg-canvas">
                             <tr>
+                                <th class="w-8 px-4 py-3"></th>
                                 <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
                                 <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Tipe') }}</th>
                                 <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
                                 <th class="px-6 py-3"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-border">
+                        <tbody class="divide-y divide-border" x-data="{ dragId: null }">
                             @forelse ($lessons as $lesson)
-                                <tr wire:key="lesson-{{ $lesson->id }}">
+                                <tr
+                                    wire:key="lesson-{{ $lesson->id }}"
+                                    @dragover.prevent
+                                    @drop="dragId !== null && $wire.reorder(dragId, {{ $lesson->id }}); dragId = null"
+                                >
+                                    <td class="px-4 py-4 text-ink-muted">
+                                        @if (! $lessons->hasPages())
+                                            <span draggable="true" @dragstart="dragId = {{ $lesson->id }}" class="cursor-grab active:cursor-grabbing inline-flex" title="{{ __('Seret untuk mengurutkan') }}">
+                                                <x-drag-handle-icon />
+                                            </span>
+                                        @else
+                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman') }}">
+                                                <x-drag-handle-icon />
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-4 text-sm text-ink-primary font-medium">
                                         {{ $lesson->title }}
                                         <div class="font-mono text-xs text-ink-muted">{{ $lesson->slug }}</div>
@@ -214,7 +249,7 @@ $delete = function () {
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-sm text-ink-secondary">
+                                    <td colspan="5" class="px-6 py-8 text-center text-sm text-ink-secondary">
                                         {{ __('Belum ada lesson di module ini.') }}
                                     </td>
                                 </tr>
