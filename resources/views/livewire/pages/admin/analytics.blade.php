@@ -14,66 +14,97 @@ layout('layouts.app');
 // queries over the entire dataset, not per-viewer, so every admin who
 // opens this page within the TTL reuses the same snapshot instead of
 // re-running six queries (several of them multi-table joins) each time.
+//
+// The cached payload must be plain arrays, not Eloquent models/
+// Collections or stdClass rows: this app's cache config defaults
+// serializable_classes to false, so unserialize() runs with
+// allowed_classes => false and silently replaces any cached object
+// with an unusable stub on the next read — only arrays/scalars
+// survive a round trip. courseStats/quizStats/recentActivity are
+// cast to arrays before caching and reconstructed into objects
+// (recentActivity's created_at back into a real Carbon instance)
+// after every read, cache hit or miss.
 state([
-    'analytics' => fn () => Cache::remember('admin:analytics', 300, fn () => [
-        'totalStudents' => User::role('Student')->count(),
+    'analytics' => function () {
+        $cached = Cache::remember('admin:analytics', 300, fn () => [
+            'totalStudents' => User::role('Student')->count(),
 
-        'activeStudents' => UserProgress::where('created_at', '>=', now()->subDays(7))
-            ->distinct('user_id')
-            ->count('user_id'),
+            'activeStudents' => UserProgress::where('created_at', '>=', now()->subDays(7))
+                ->distinct('user_id')
+                ->count('user_id'),
 
-        'totalCompletions' => UserProgress::count(),
+            'totalCompletions' => UserProgress::count(),
 
-        'averageQuizScore' => (int) round(QuizAttempt::avg('score') ?? 0),
+            'averageQuizScore' => (int) round(QuizAttempt::avg('score') ?? 0),
 
-        'courseStats' => DB::table('courses')
-            ->join('tracks', 'tracks.id', '=', 'courses.track_id')
-            ->leftJoin('modules', 'modules.course_id', '=', 'courses.id')
-            ->leftJoin('lessons', function ($join) {
-                $join->on('lessons.module_id', '=', 'modules.id')->where('lessons.is_published', true);
-            })
-            ->leftJoin('user_progress', 'user_progress.lesson_id', '=', 'lessons.id')
-            ->where('courses.is_published', true)
-            ->select(
-                'courses.id',
-                'courses.title as course_title',
-                'tracks.title as track_title',
-                DB::raw('COUNT(DISTINCT lessons.id) as lessons_count'),
-                DB::raw('COUNT(DISTINCT user_progress.user_id) as students_count'),
-                DB::raw('COUNT(user_progress.id) as completions_count')
-            )
-            ->groupBy('courses.id', 'courses.title', 'tracks.title')
-            ->orderByDesc('students_count')
-            ->get()
-            ->map(function ($row) {
-                $row->completion_rate = ($row->students_count > 0 && $row->lessons_count > 0)
-                    ? (int) round($row->completions_count / ($row->students_count * $row->lessons_count) * 100)
-                    : 0;
+            'courseStats' => DB::table('courses')
+                ->join('tracks', 'tracks.id', '=', 'courses.track_id')
+                ->leftJoin('modules', 'modules.course_id', '=', 'courses.id')
+                ->leftJoin('lessons', function ($join) {
+                    $join->on('lessons.module_id', '=', 'modules.id')->where('lessons.is_published', true);
+                })
+                ->leftJoin('user_progress', 'user_progress.lesson_id', '=', 'lessons.id')
+                ->where('courses.is_published', true)
+                ->select(
+                    'courses.id',
+                    'courses.title as course_title',
+                    'tracks.title as track_title',
+                    DB::raw('COUNT(DISTINCT lessons.id) as lessons_count'),
+                    DB::raw('COUNT(DISTINCT user_progress.user_id) as students_count'),
+                    DB::raw('COUNT(user_progress.id) as completions_count')
+                )
+                ->groupBy('courses.id', 'courses.title', 'tracks.title')
+                ->orderByDesc('students_count')
+                ->get()
+                ->map(function ($row) {
+                    $row->completion_rate = ($row->students_count > 0 && $row->lessons_count > 0)
+                        ? (int) round($row->completions_count / ($row->students_count * $row->lessons_count) * 100)
+                        : 0;
 
-                return $row;
+                    return (array) $row;
+                })
+                ->all(),
+
+            'quizStats' => DB::table('quizzes')
+                ->join('lessons', 'lessons.id', '=', 'quizzes.lesson_id')
+                ->join('modules', 'modules.id', '=', 'lessons.module_id')
+                ->join('courses', 'courses.id', '=', 'modules.course_id')
+                ->leftJoin('quiz_attempts', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
+                ->select(
+                    'quizzes.id',
+                    'quizzes.title as quiz_title',
+                    'courses.title as course_title',
+                    DB::raw('COUNT(quiz_attempts.id) as attempts_count'),
+                    DB::raw('AVG(quiz_attempts.score) as average_score')
+                )
+                ->groupBy('quizzes.id', 'quizzes.title', 'courses.title')
+                ->orderByDesc('attempts_count')
+                ->get()
+                ->map(fn ($row) => (array) $row)
+                ->all(),
+
+            'recentActivity' => UserProgress::with(['user:id,name', 'lesson:id,title,module_id', 'lesson.module:id,course_id', 'lesson.module.course:id,title'])
+                ->latest('user_progress.created_at')
+                ->limit(10)
+                ->get()
+                ->toArray(),
+        ]);
+
+        return [
+            'totalStudents' => $cached['totalStudents'],
+            'activeStudents' => $cached['activeStudents'],
+            'totalCompletions' => $cached['totalCompletions'],
+            'averageQuizScore' => $cached['averageQuizScore'],
+            'courseStats' => collect($cached['courseStats'])->map(fn ($row) => (object) $row),
+            'quizStats' => collect($cached['quizStats'])->map(fn ($row) => (object) $row),
+            'recentActivity' => collect($cached['recentActivity'])->map(function ($row) {
+                $progress = json_decode(json_encode($row));
+                $progress->created_at = \Illuminate\Support\Carbon::parse($row['created_at']);
+
+                return $progress;
             }),
-
-        'quizStats' => DB::table('quizzes')
-            ->join('lessons', 'lessons.id', '=', 'quizzes.lesson_id')
-            ->join('modules', 'modules.id', '=', 'lessons.module_id')
-            ->join('courses', 'courses.id', '=', 'modules.course_id')
-            ->leftJoin('quiz_attempts', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
-            ->select(
-                'quizzes.id',
-                'quizzes.title as quiz_title',
-                'courses.title as course_title',
-                DB::raw('COUNT(quiz_attempts.id) as attempts_count'),
-                DB::raw('AVG(quiz_attempts.score) as average_score')
-            )
-            ->groupBy('quizzes.id', 'quizzes.title', 'courses.title')
-            ->orderByDesc('attempts_count')
-            ->get(),
-
-        'recentActivity' => UserProgress::with(['user:id,name', 'lesson:id,title,module_id', 'lesson.module:id,course_id', 'lesson.module.course:id,title'])
-            ->latest('user_progress.created_at')
-            ->limit(10)
-            ->get(),
-    ]),
+        ];
+    },
 ]);
 
 ?>

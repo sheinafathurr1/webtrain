@@ -400,6 +400,21 @@ Audit singkat menutup beberapa N+1 query, celah caching, dan satu race condition
   (`Cache::remember('admin:analytics', 300, ...)`, satu cache entry untuk 6 metrik sekaligus) sebelumnya
   menjalankan query agregat penuh di setiap page load. TTL pendek dipilih karena data ini tidak butuh akurasi
   real-time detik-per-detik — trade-off standar untuk dashboard/leaderboard skala besar.
+  **Bug produksi yang sempat lolos**: implementasi awal meng-cache Eloquent Collection/model langsung.
+  `config/cache.php` men-set `serializable_classes => false` (default keamanan Laravel terhadap PHP Object
+  Injection lewat cache poisoning), yang bikin `unserialize()` jalan dengan `allowed_classes => false` —
+  setiap object di data yang di-cache diam-diam diganti jadi stub `__PHP_Incomplete_Class` yang tak bisa
+  dipakai. Cache write-nya sukses (baris pertama selalu render benar), tapi baca berikutnya (cache hit)
+  melempar "The script tried to call a method on an incomplete object" persis di titik pertama kode memanggil
+  method pada hasil cache — leaderboard & admin analytics keduanya kena. Diperbaiki dengan meng-cache **array
+  polos** saja (`->toArray()`/`(array) $row`, bukan Collection/model), lalu merekonstruksi jadi object
+  (`(object)`, atau `json_decode(json_encode(...))` untuk relasi bertingkat di `recentActivity`, plus
+  `Carbon::parse()` ulang untuk kolom timestamp) setiap kali dibaca dari cache — baik saat cache miss maupun
+  hit. Yang bikin ini lolos dari full test suite: `phpunit.xml` men-set `CACHE_STORE=array` untuk testing, dan
+  `ArrayStore` menyimpan value langsung di memori tanpa pernah benar-benar serialize/unserialize — jadi bug
+  serialisasi macam ini tidak akan pernah ketahuan lewat cache driver testing biasa. `tests/Feature/CacheSerializationTest.php`
+  sengaja meng-override `cache.default` ke `database` di dalam test itu sendiri supaya round-trip serialisasi
+  yang asli benar-benar teruji.
 - **`GamificationService::checkBadges()`** — tiap badge dengan `criteria_type` yang sama (mis. dua badge
   "jumlah lesson selesai" di threshold berbeda) sebelumnya masing-masing menjalankan query yang identik. Sekarang
   di-memoize per pemanggilan `checkBadges()` — mengurangi query per lesson-completion dari 17 ke 12 di data uji.

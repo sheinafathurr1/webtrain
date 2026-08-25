@@ -12,12 +12,18 @@ layout('layouts.app');
 state([
     // Same top-50 for every viewer, so one shared cache entry serves
     // everyone — short TTL keeps it close to real-time without hitting
-    // the DB on every single page view.
-    'leaderboard' => fn () => Cache::remember('leaderboard:top50', 60, fn () => User::role('Student')
+    // the DB on every single page view. Cached as a plain array, not
+    // an Eloquent Collection: Laravel's cache config defaults
+    // serializable_classes to false, so unserialize() runs with
+    // allowed_classes => false and silently turns any cached object
+    // into an unusable stub — only arrays/scalars survive a round trip.
+    'leaderboard' => fn () => collect(Cache::remember('leaderboard:top50', 60, fn () => User::role('Student')
         ->orderByDesc('total_points')
         ->orderBy('id')
         ->limit(50)
-        ->get()),
+        ->get()
+        ->toArray()))
+        ->map(fn ($row) => (object) $row),
 ]);
 
 ?>
