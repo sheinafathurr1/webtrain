@@ -31,6 +31,7 @@ state([
     'search' => '',
     'status' => '',
     'typeFilter' => '',
+    'reordering' => false,
 ]);
 
 mount(function (Module $module) {
@@ -191,19 +192,15 @@ $delete = function () {
     $this->confirmingDeleteId = null;
 };
 
-$reorder = function (int $draggedId, int $targetId) {
-    $ids = Lesson::where('module_id', $this->module->id)->orderBy('order')->orderBy('title')->pluck('id')->all();
+$saveOrder = function (array $orderedIds) {
+    $validIds = Lesson::where('module_id', $this->module->id)->pluck('id')->all();
+    $orderedIds = array_values(array_intersect($orderedIds, $validIds));
 
-    if ($draggedId === $targetId || ! in_array($draggedId, $ids, true) || ! in_array($targetId, $ids, true)) {
-        return;
-    }
-
-    $ids = array_values(array_diff($ids, [$draggedId]));
-    array_splice($ids, array_search($targetId, $ids, true), 0, [$draggedId]);
-
-    foreach ($ids as $index => $id) {
+    foreach ($orderedIds as $index => $id) {
         Lesson::where('id', $id)->update(['order' => $index]);
     }
+
+    $this->reordering = false;
 };
 
 ?>
@@ -219,104 +216,126 @@ $reorder = function (int $draggedId, int $targetId) {
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="flex justify-between items-center gap-3 flex-wrap">
-                <div class="flex gap-3 flex-wrap flex-1">
-                    <input
-                        type="search"
-                        wire:model.live.debounce.300ms="search"
-                        placeholder="{{ __('Cari judul atau slug...') }}"
-                        class="w-64 max-w-full rounded-xl border-border bg-surface text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:ring-brand"
-                    />
-                    <select wire:model.live="status" class="rounded-xl border-border bg-surface text-sm text-ink-primary focus:border-brand focus:ring-brand">
-                        <option value="">{{ __('Semua Status') }}</option>
-                        <option value="published">{{ __('Published') }}</option>
-                        <option value="draft">{{ __('Draft') }}</option>
-                    </select>
-                    <select wire:model.live="typeFilter" class="rounded-xl border-border bg-surface text-sm text-ink-primary focus:border-brand focus:ring-brand">
-                        <option value="">{{ __('Semua Tipe') }}</option>
-                        @foreach ($types as $t)
-                            <option value="{{ $t }}">{{ ucfirst($t) }}</option>
-                        @endforeach
-                    </select>
-                    @if ($search !== '' || $status !== '' || $typeFilter !== '')
-                        <button type="button" wire:click="resetFilters" class="text-sm font-semibold text-ink-secondary hover:text-brand motion-safe:transition-colors duration-150">{{ __('Reset filter') }}</button>
-                    @endif
-                </div>
-
-                <x-primary-button wire:click="openCreate">{{ __('+ Lesson Baru') }}</x-primary-button>
-            </div>
-
             @php $hasActiveFilters = $search !== '' || $status !== '' || $typeFilter !== ''; @endphp
+            @php $canReorder = ! $lessons->hasPages() && ! $hasActiveFilters && $lessons->isNotEmpty(); @endphp
 
-            @if (! $lessons->hasPages() && ! $hasActiveFilters && $lessons->isNotEmpty())
-                <p class="text-xs text-ink-muted -mb-2">{{ __('Seret ikon di kiri untuk mengubah urutan lesson.') }}</p>
-            @endif
+            @if ($reordering)
+                <div
+                    x-data="{
+                        items: @js($lessons->map(fn ($l) => ['id' => $l->id, 'title' => $l->title, 'subtitle' => $l->slug.' · '.$l->type])->values()->all()),
+                        dragIndex: null,
+                    }"
+                    class="bg-surface border border-brand/30 rounded-2xl p-4"
+                >
+                    <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                        <p class="text-sm text-ink-secondary">{{ __('Seret item untuk mengubah urutan, lalu klik Simpan Urutan.') }}</p>
+                        <div class="flex gap-2 shrink-0">
+                            <x-secondary-button type="button" wire:click="$set('reordering', false)">{{ __('Batal') }}</x-secondary-button>
+                            <x-primary-button type="button" @click="$wire.saveOrder(items.map(i => i.id))">{{ __('Simpan Urutan') }}</x-primary-button>
+                        </div>
+                    </div>
 
-            <div class="bg-surface border border-border rounded-2xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-border">
-                        <thead class="bg-canvas">
-                            <tr>
-                                <th class="w-8 px-4 py-3"></th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Tipe') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
-                                <th class="px-6 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-border" x-data="{ dragId: null }">
-                            @forelse ($lessons as $lesson)
-                                <tr
-                                    wire:key="lesson-{{ $lesson->id }}"
-                                    @dragover.prevent
-                                    @drop="dragId !== null && $wire.reorder(dragId, {{ $lesson->id }}); dragId = null"
-                                >
-                                    <td class="px-4 py-4 text-ink-muted">
-                                        @if (! $lessons->hasPages() && ! $hasActiveFilters)
-                                            <span draggable="true" @dragstart="dragId = {{ $lesson->id }}" class="cursor-grab active:cursor-grabbing inline-flex" title="{{ __('Seret untuk mengurutkan') }}">
-                                                <x-drag-handle-icon />
-                                            </span>
-                                        @else
-                                            <span class="opacity-30 inline-flex" title="{{ __('Reorder manual hanya tersedia saat daftar muat dalam 1 halaman tanpa filter aktif') }}">
-                                                <x-drag-handle-icon />
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-ink-primary font-medium">
-                                        {{ $lesson->title }}
-                                        <div class="font-mono text-xs text-ink-muted">{{ $lesson->slug }}</div>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <x-badge color="accent">{{ $lesson->type }}</x-badge>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <x-badge :color="$lesson->is_published ? 'brand' : 'muted'">{{ $lesson->is_published ? __('published') : __('draft') }}</x-badge>
-                                    </td>
-                                    <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
-                                        @if ($lesson->type === \App\Models\Lesson::TYPE_QUIZ)
-                                            <a href="{{ route('admin.quizzes.builder', $lesson) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Soal Quiz') }}</a>
-                                        @endif
-                                        <button wire:click="openEdit({{ $lesson->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
-                                        <button type="button" wire:click="confirmingDeleteId = {{ $lesson->id }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-sm text-ink-secondary">
-                                        @if ($hasActiveFilters)
-                                            {{ __('Tidak ada lesson yang cocok dengan pencarian/filter.') }}
-                                        @else
-                                            {{ __('Belum ada lesson di module ini.') }}
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    <div class="space-y-2">
+                        <template x-for="(item, index) in items" :key="item.id">
+                            <div
+                                draggable="true"
+                                @dragstart="dragIndex = index"
+                                @dragend="dragIndex = null"
+                                @dragover.prevent="if (dragIndex !== null && dragIndex !== index) { items.splice(index, 0, items.splice(dragIndex, 1)[0]); dragIndex = index; }"
+                                @drop.prevent
+                                class="flex items-center gap-3 px-4 py-3 rounded-xl border motion-safe:transition-all duration-150 cursor-grab active:cursor-grabbing select-none"
+                                :class="dragIndex === index ? 'opacity-50 scale-[0.98] border-brand bg-brand/5 shadow-md' : 'border-border bg-canvas hover:border-brand/40'"
+                            >
+                                <x-drag-handle-icon />
+                                <span class="text-sm font-medium text-ink-primary truncate" x-text="item.title"></span>
+                                <span class="font-mono text-xs text-ink-muted truncate" x-text="item.subtitle"></span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="flex justify-between items-center gap-3 flex-wrap">
+                    <div class="flex gap-3 flex-wrap flex-1">
+                        <input
+                            type="search"
+                            wire:model.live.debounce.300ms="search"
+                            placeholder="{{ __('Cari judul atau slug...') }}"
+                            class="w-64 max-w-full rounded-xl border-border bg-surface text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:ring-brand"
+                        />
+                        <select wire:model.live="status" class="rounded-xl border-border bg-surface text-sm text-ink-primary focus:border-brand focus:ring-brand">
+                            <option value="">{{ __('Semua Status') }}</option>
+                            <option value="published">{{ __('Published') }}</option>
+                            <option value="draft">{{ __('Draft') }}</option>
+                        </select>
+                        <select wire:model.live="typeFilter" class="rounded-xl border-border bg-surface text-sm text-ink-primary focus:border-brand focus:ring-brand">
+                            <option value="">{{ __('Semua Tipe') }}</option>
+                            @foreach ($types as $t)
+                                <option value="{{ $t }}">{{ ucfirst($t) }}</option>
+                            @endforeach
+                        </select>
+                        @if ($hasActiveFilters)
+                            <button type="button" wire:click="resetFilters" class="text-sm font-semibold text-ink-secondary hover:text-brand motion-safe:transition-colors duration-150">{{ __('Reset filter') }}</button>
+                        @endif
+                    </div>
 
-            {{ $lessons->links() }}
+                    <div class="flex gap-2 shrink-0">
+                        @if ($canReorder)
+                            <x-secondary-button type="button" wire:click="$set('reordering', true)">{{ __('Ubah Urutan') }}</x-secondary-button>
+                        @endif
+                        <x-primary-button wire:click="openCreate">{{ __('+ Lesson Baru') }}</x-primary-button>
+                    </div>
+                </div>
+
+                <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-border">
+                            <thead class="bg-canvas">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Judul') }}</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Tipe') }}</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-ink-muted uppercase tracking-wide">{{ __('Status') }}</th>
+                                    <th class="px-6 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-border">
+                                @forelse ($lessons as $lesson)
+                                    <tr wire:key="lesson-{{ $lesson->id }}">
+                                        <td class="px-6 py-4 text-sm text-ink-primary font-medium">
+                                            {{ $lesson->title }}
+                                            <div class="font-mono text-xs text-ink-muted">{{ $lesson->slug }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm">
+                                            <x-badge color="accent">{{ $lesson->type }}</x-badge>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm">
+                                            <x-badge :color="$lesson->is_published ? 'brand' : 'muted'">{{ $lesson->is_published ? __('published') : __('draft') }}</x-badge>
+                                        </td>
+                                        <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
+                                            @if ($lesson->type === \App\Models\Lesson::TYPE_QUIZ)
+                                                <a href="{{ route('admin.quizzes.builder', $lesson) }}" wire:navigate class="font-semibold text-brand hover:text-brand-dark motion-safe:transition-colors duration-150">{{ __('Kelola Soal Quiz') }}</a>
+                                            @endif
+                                            <button wire:click="openEdit({{ $lesson->id }})" class="font-semibold text-ink-secondary hover:text-ink-primary motion-safe:transition-colors duration-150">{{ __('Edit') }}</button>
+                                            <button type="button" wire:click="confirmingDeleteId = {{ $lesson->id }}" class="font-semibold text-danger hover:opacity-75 motion-safe:transition-opacity duration-150">{{ __('Hapus') }}</button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-8 text-center text-sm text-ink-secondary">
+                                            @if ($hasActiveFilters)
+                                                {{ __('Tidak ada lesson yang cocok dengan pencarian/filter.') }}
+                                            @else
+                                                {{ __('Belum ada lesson di module ini.') }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{ $lessons->links() }}
+            @endif
         </div>
     </div>
 

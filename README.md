@@ -68,20 +68,35 @@ Admin CRUD-nya di `/admin/tracks` → `/admin/tracks/{track}/courses` → `/admi
 (cascade: hapus track akan menghapus course/module/lesson di dalamnya). Lesson tipe `quiz` punya halaman
 builder terpisah, `/admin/lessons/{lesson}/quiz` — lihat bagian Quiz & Assessment di bawah.
 
-Tiap tabel juga bisa diurutkan lewat **drag-and-drop** (ikon grip di kolom paling kiri) — pakai native HTML5
-drag events lewat Alpine (`draggable`, `@dragstart`/`@dragover.prevent`/`@drop`), tanpa library tambahan. Saat
-drop, Livewire memanggil action `reorder($draggedId, $targetId)` yang mengambil urutan id saat ini (scoped ke
-parent-nya masing-masing — semua track untuk halaman Track, course dalam 1 track untuk halaman Course, dst),
-menyisipkan id yang di-drag tepat sebelum id target, lalu menulis ulang kolom `order` 0..n secara berurutan;
-`reorder` juga memverifikasi kedua id benar-benar berada dalam scope yang sama sebelum memprosesnya, supaya
-drag-drop tidak bisa dipakai untuk mengubah `order` baris di luar parent yang sedang dibuka. Drag-and-drop
-hanya aktif selama daftar muat dalam 1 halaman tanpa filter aktif (`! $items->hasPages() && ! $hasActiveFilters`)
-— kalau sudah lebih dari 10 item, terpaginasi, atau sedang difilter, ikon grip jadi non-aktif (redup) dan
-urutan tetap bisa diatur manual lewat field "Urutan" di modal edit seperti sebelumnya.
+Tiap tabel juga bisa diurutkan lewat **drag-and-drop**, tapi di belakang tombol **"Ubah Urutan"** — bukan
+selalu-aktif di tabel utama. Klik tombol itu ganti seluruh tabel (filter, tombol "+ Baru", pagination) jadi
+panel reorder yang fokus: daftar sederhana (judul + slug, tanpa kolom lain/link aksi) yang seluruhnya
+di-render & di-drag lewat Alpine `x-data`/`x-for` — bukan lewat Livewire per-baris — supaya:
+
+- **Drag jarak jauh benar-benar jalan.** Versi awal memanggil Livewire `reorder($draggedId, $targetId)` di
+  setiap `drop`, menghitung ulang urutan dari DB tiap kali — rapuh untuk drag yang melompati beberapa baris
+  sekaligus. Sekarang, urutan cuma array JS lokal (`items`) yang di-splice on the fly saat `@dragover` lewat
+  di atas baris lain (`items.splice(index, 0, items.splice(dragIndex, 1)[0])`), jadi drag dari baris pertama
+  ke baris terakhir — atau ke mana pun — langsung kelihatan bergeser real-time, tanpa round-trip server sama
+  sekali sampai di-Simpan.
+- **Kelihatan jelas kalau lagi di-drag.** Baris yang sedang ditarik dapat highlight warna brand + opacity
+  turun + sedikit mengecil (`opacity-50 scale-[0.98] border-brand bg-brand/5 shadow-md`), dan baris lain
+  langsung geser posisi begitu dilewati — bukan cuma ikon grip statis seperti sebelumnya.
+- **Halaman tetap ringan secara default.** Tabel normal tidak lagi punya kolom grip/atribut `draggable` sama
+  sekali — itu semua cuma dirender saat mode reorder aktif. Tombol "Ubah Urutan" sendiri hanya muncul saat
+  daftar muat dalam 1 halaman tanpa filter aktif (`! $items->hasPages() && ! $hasActiveFilters`); di luar itu,
+  urutan tetap bisa diatur manual lewat field "Urutan" di modal edit seperti sebelumnya.
+
+Klik **"Simpan Urutan"** memanggil `$wire.saveOrder(items.map(i => i.id))` — satu action Livewire per sesi
+reorder (bukan satu per drop), yang menulis ulang kolom `order` 0..n sesuai urutan final dari client. `saveOrder`
+memvalidasi id dengan `array_intersect` terhadap id yang benar-benar ada di scope parent-nya (semua track untuk
+halaman Track, course dalam 1 track untuk halaman Course, dst) sebelum menulis apa pun, supaya payload yang
+di-craft tidak bisa dipakai mengubah `order` baris di luar parent yang sedang dibuka. Tombol "Batal" keluar dari
+mode reorder tanpa memanggil server sama sekali.
 
 Setiap tabel juga punya **search & filter**: kotak pencarian (judul/slug, `wire:model.live.debounce.300ms`)
 dan dropdown status (published/draft) di semua level, plus dropdown tipe lesson (text/video/exercise/quiz) khusus
-di halaman Lesson. Query di-scope ke parent yang sama dengan yang dipakai `reorder` (mis. course di halaman
+di halaman Lesson. Query di-scope ke parent yang sama dengan yang dipakai `saveOrder` (mis. course di halaman
 Module hanya mencari dalam course itu). Mengubah search/filter otomatis memanggil `resetPage()` lewat hook
 `updated<Nama Properti>` Livewire supaya tidak nyangkut di halaman pagination yang sudah kosong, dan tombol
 "Reset filter" hanya muncul saat ada filter aktif.
