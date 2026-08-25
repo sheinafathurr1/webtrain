@@ -362,6 +362,36 @@ Buka `http://127.0.0.1:8000`.
 php artisan test
 ```
 
+### Deploy ke production
+
+`php artisan serve` di atas cuma buat development. Sebelum deploy ke server sungguhan (nginx/Apache + PHP-FPM),
+jalankan optimisasi bawaan Laravel — tanpa ini, **setiap request** melakukan hal-hal yang seharusnya cukup
+sekali saat deploy: parse ulang semua file `config/*.php`, resolve ulang seluruh route lewat reflection, dan
+compile ulang template Blade dari nol:
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+
+php artisan migrate --force
+php artisan optimize   # = config:cache + route:cache + view:cache + event:cache
+```
+
+Jalankan `php artisan optimize:clear` dulu tiap kali sebelum `.env`/route/config berubah lagi, baru
+`php artisan optimize` ulang — cache yang basi (mis. route lama) lebih berbahaya daripada tidak ada cache sama
+sekali. Selain itu, pastikan di `php.ini`:
+
+```ini
+opcache.enable=1
+opcache.validate_timestamps=0   ; matikan di production; source tidak berubah tanpa deploy ulang
+opcache.jit=1255
+opcache.jit_buffer_size=64M
+```
+
+`QUEUE_CONNECTION=database` sudah di-set di `.env.example`, tapi worker-nya tidak jalan sendiri — pastikan
+`php artisan queue:work` (atau `queue:work --daemon` di balik Supervisor) aktif di production, terutama untuk
+`streak:remind` (lihat bagian Gamification) yang mengirim notifikasi lewat queue.
+
 ## Struktur Folder Penting
 
 ```
@@ -449,6 +479,20 @@ Audit singkat menutup beberapa N+1 query, celah caching, dan satu race condition
   sudah tersedia jadi tinggal jalankan `php artisan queue:work` di production.
 - **Rate limiting di endpoint publik** — `/sertifikat/verifikasi/{code}` (tanpa auth, by design) ditambah
   `throttle:30,1` supaya tidak jadi target scraping/enumerasi kode sertifikat.
+- **N+1 di dashboard student, sebanding jumlah course yang disentuh** — kartu "lanjut belajar" di dashboard
+  memanggil `progressPercentFor()`/`nextLessonFor()` untuk tiap course yang pernah punya lesson selesai. Karena
+  query eager-load-nya cuma `->with('track')` (bukan `modules.lessons`), tiap pemanggilan itu memicu
+  `publishedLessons()` untuk query modules+lessons dari awal, ditambah satu query `user_progress` terpisah lewat
+  `completedLessonIdsFor()` — jadi total query dashboard naik terus seiring makin banyak course yang disentuh
+  student (diukur: **19 query untuk 2 course, 31 query untuk 6 course** — pola linear, bukan konstan). Diperbaiki
+  dua arah sekaligus: query course di dashboard sekarang eager-load `modules.lessons` supaya semua course dapat
+  dalam sedikit query batch (bukan per-course), dan `progressPercentFor()`/`nextLessonFor()` menerima parameter
+  opsional `$allCompletedLessonIds` (id lesson selesai milik user, sudah di-fetch sekali di awal closure) supaya
+  `completedLessonIdsFor()` cukup `intersect()` di memori kalau data itu sudah tersedia, alih-alih query
+  `user_progress` baru per course. Setelah fix, query dashboard **flat** berapa pun jumlah course-nya —
+  diverifikasi lewat `tests/Feature/Student/DashboardPerformanceTest.php` yang membandingkan jumlah query
+  student dengan 2 vs 6 course (dan sengaja meng-warm cache permission Spatie dulu sebelum mengukur, supaya
+  cache global itu tidak ikut mencemari perbandingan).
 - **Dicoba tapi di-revert**: mengganti loop `update()` per-baris di action `reorder()` (admin drag-and-drop)
   dengan satu panggilan `upsert()` batch. Bekerja di MySQL, tapi SQLite (dipakai test suite) memvalidasi
   constraint `NOT NULL` di klausa `INSERT` milik `ON CONFLICT` walau baris itu pasti akan lewat jalur `UPDATE`

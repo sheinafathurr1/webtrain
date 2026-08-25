@@ -81,7 +81,13 @@ class Course extends Model
             ->values();
     }
 
-    public function progressPercentFor(?User $user): int
+    /**
+     * Pass $allCompletedLessonIds (every lesson id the user has completed,
+     * across all courses — fetched once by the caller) to check membership
+     * in memory instead of issuing a UserProgress query per course. Used by
+     * the dashboard, which calls this once per enrolled course.
+     */
+    public function progressPercentFor(?User $user, ?array $allCompletedLessonIds = null): int
     {
         $lessons = $this->publishedLessons();
 
@@ -89,7 +95,7 @@ class Course extends Model
             return 0;
         }
 
-        $completed = $this->completedLessonIdsFor($user)->count();
+        $completed = $this->completedLessonIdsFor($user, $allCompletedLessonIds)->count();
 
         return (int) round($completed / $lessons->count() * 100);
     }
@@ -98,7 +104,7 @@ class Course extends Model
      * The lesson a student should continue with: the first not yet
      * completed, or the last lesson if everything is done.
      */
-    public function nextLessonFor(?User $user): ?Lesson
+    public function nextLessonFor(?User $user, ?array $allCompletedLessonIds = null): ?Lesson
     {
         $lessons = $this->publishedLessons();
 
@@ -110,7 +116,7 @@ class Course extends Model
             return $lessons->first();
         }
 
-        $completedIds = $this->completedLessonIdsFor($user);
+        $completedIds = $this->completedLessonIdsFor($user, $allCompletedLessonIds);
 
         return $lessons->first(fn (Lesson $lesson) => ! $completedIds->contains($lesson->id)) ?? $lessons->last();
     }
@@ -118,11 +124,24 @@ class Course extends Model
     /**
      * Memoized per user: progressPercentFor() and nextLessonFor() both
      * need "which of this course's lessons has the user completed",
-     * so share one query instead of each running its own.
+     * so share one query instead of each running its own. When the caller
+     * already has the user's full completed-lesson-id set on hand, this
+     * filters it in memory and skips the query entirely.
      */
-    private function completedLessonIdsFor(User $user): Collection
+    private function completedLessonIdsFor(User $user, ?array $allCompletedLessonIds = null): Collection
     {
-        return $this->completedLessonIdsCache[$user->id] ??= UserProgress::where('user_id', $user->id)
+        if (array_key_exists($user->id, $this->completedLessonIdsCache)) {
+            return $this->completedLessonIdsCache[$user->id];
+        }
+
+        if ($allCompletedLessonIds !== null) {
+            return $this->completedLessonIdsCache[$user->id] = $this->publishedLessons()
+                ->pluck('id')
+                ->intersect($allCompletedLessonIds)
+                ->values();
+        }
+
+        return $this->completedLessonIdsCache[$user->id] = UserProgress::where('user_id', $user->id)
             ->whereIn('lesson_id', $this->publishedLessons()->pluck('id'))
             ->pluck('lesson_id');
     }

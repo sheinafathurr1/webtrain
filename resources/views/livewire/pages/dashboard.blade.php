@@ -39,13 +39,15 @@ state([
             ->pluck('module.course_id')
             ->unique();
 
+        $allCompletedLessonIds = $completedLessonIds->all();
+
         return Course::whereIn('id', $courseIds)
-            ->with('track')
+            ->with(['track', 'modules.lessons'])
             ->get()
             ->map(fn (Course $course) => [
                 'course' => $course,
-                'percent' => $course->progressPercentFor(Auth::user()),
-                'next' => $course->nextLessonFor(Auth::user()),
+                'percent' => $course->progressPercentFor(Auth::user(), $allCompletedLessonIds),
+                'next' => $course->nextLessonFor(Auth::user(), $allCompletedLessonIds),
             ]);
     },
     'recentActivity' => fn () => UserProgress::where('user_id', Auth::id())
